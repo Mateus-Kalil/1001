@@ -677,63 +677,6 @@
             color: var(--accent-color);
         }
 
-        .mobile-keyboard {
-            display: none;
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            background: #111;
-            padding: 5px;
-            box-sizing: border-box;
-            z-index: 90;
-            border-top: 1px solid #333;
-        }
-
-        @media (max-width: 768px) {
-            .mobile-keyboard {
-                display: block;
-            }
-            
-            .terminal-window {
-                height: calc(var(--terminal-height) - 50px);
-            }
-            
-            .footer {
-                bottom: 60px;
-            }
-        }
-
-        .mobile-keyboard-row {
-            display: flex;
-            justify-content: center;
-            margin: 2px 0;
-        }
-
-        .mobile-key {
-            background: #222;
-            color: var(--terminal-text);
-            border: 1px solid #444;
-            border-radius: 4px;
-            padding: 6px;
-            margin: 2px;
-            min-width: 30px;
-            text-align: center;
-            cursor: pointer;
-            user-select: none;
-            font-family: monospace;
-        }
-
-        .mobile-key:active {
-            background: #333;
-            color: var(--accent-color);
-        }
-
-        .mobile-key.special {
-            background: #333;
-            min-width: 50px;
-        }
-
         @keyframes boot {
             0% {
                 opacity: 0;
@@ -1035,27 +978,6 @@
         </div>
     </div>
 
-    <div class="mobile-keyboard" id="mobile-keyboard">
-        <div class="mobile-keyboard-row">
-            <div class="mobile-key">Esc</div>
-            <div class="mobile-key">Tab</div>
-            <div class="mobile-key">Ctrl</div>
-            <div class="mobile-key">Alt</div>
-            <div class="mobile-key special">Space</div>
-            <div class="mobile-key">|</div>
-            <div class="mobile-key">/</div>
-            <div class="mobile-key">-</div>
-        </div>
-        <div class="mobile-keyboard-row">
-            <div class="mobile-key">↑</div>
-            <div class="mobile-key">↓</div>
-            <div class="mobile-key">←</div>
-            <div class="mobile-key">→</div>
-            <div class="mobile-key special">Backspace</div>
-            <div class="mobile-key special">Enter</div>
-        </div>
-    </div>
-
     <div class="modal" id="historyModal">
         <div class="modal-content">
             <div class="modal-header">
@@ -1264,7 +1186,6 @@
         const contextMenu = document.getElementById('context-menu');
         const contextCopy = document.getElementById('context-copy');
         const contextPaste = document.getElementById('context-paste');
-        const mobileKeyboard = document.getElementById('mobile-keyboard');
         
         const installBackBtn = document.getElementById('install-back');
         const installNextBtn = document.getElementById('install-next');
@@ -1337,9 +1258,6 @@
                 startSystem();
             }
             
-            // Setup mobile keyboard
-            setupMobileKeyboard();
-            
             document.addEventListener('keydown', function(e) {
                 if (e.key === 'Control') ctrlKeyPressed = true;
                 if (e.key === 'Alt') altKeyPressed = true;
@@ -1350,6 +1268,13 @@
             document.addEventListener('keyup', function(e) {
                 if (e.key === 'Control') ctrlKeyPressed = false;
                 if (e.key === 'Alt') altKeyPressed = false;
+            });
+            
+            // Configuração para entrada de texto através de toques na tela
+            terminal.addEventListener('click', function() {
+                if (systemState.stage === 'running' && !activeEditor) {
+                    focusTerminal();
+                }
             });
             
             document.addEventListener('click', function(e) {
@@ -1492,69 +1417,128 @@
             
             editorContent.addEventListener('click', updateEditorPosition);
             editorContent.addEventListener('keyup', updateEditorPosition);
+            
+            // Criar uma entrada invisível para capturar entrada do teclado nativo
+            createHiddenInput();
         };
 
-        function setupMobileKeyboard() {
-            const mobileKeys = document.querySelectorAll('.mobile-key');
+        function createHiddenInput() {
+            // Verificar se já existe
+            let hiddenInput = document.getElementById('hidden-input');
             
-            mobileKeys.forEach(key => {
-                key.addEventListener('click', function() {
-                    const keyText = this.textContent;
-                    
-                    switch(keyText) {
-                        case 'Esc':
-                            // Simular Escape
-                            document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
-                            break;
-                        case 'Tab':
-                            // Simular Tab
-                            document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab' }));
-                            break;
-                        case 'Ctrl':
-                            // Toggle Ctrl
-                            ctrlKeyPressed = !ctrlKeyPressed;
-                            this.style.backgroundColor = ctrlKeyPressed ? '#444' : '#222';
-                            break;
-                        case 'Alt':
-                            // Toggle Alt
-                            altKeyPressed = !altKeyPressed;
-                            this.style.backgroundColor = altKeyPressed ? '#444' : '#222';
-                            break;
-                        case 'Space':
-                            // Inserir espaço
-                            insertText(' ');
-                            break;
-                        case 'Backspace':
-                            // Simular Backspace
-                            document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Backspace' }));
-                            break;
-                        case 'Enter':
-                            // Simular Enter
-                            document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
-                            break;
-                        case '↑':
-                            // Simular seta para cima
-                            document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp' }));
-                            break;
-                        case '↓':
-                            // Simular seta para baixo
-                            document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown' }));
-                            break;
-                        case '←':
-                            // Simular seta para esquerda
-                            document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft' }));
-                            break;
-                        case '→':
-                            // Simular seta para direita
-                            document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
-                            break;
-                        default:
-                            // Inserir o texto da tecla
-                            insertText(keyText);
-                            break;
+            if (!hiddenInput) {
+                hiddenInput = document.createElement('textarea');
+                hiddenInput.id = 'hidden-input';
+                hiddenInput.style.position = 'absolute';
+                hiddenInput.style.opacity = '0';
+                hiddenInput.style.height = '0';
+                hiddenInput.style.width = '0';
+                hiddenInput.style.zIndex = '-1';
+                hiddenInput.style.overflow = 'hidden';
+                hiddenInput.autocomplete = 'off';
+                hiddenInput.autocorrect = 'off';
+                hiddenInput.autocapitalize = 'off';
+                hiddenInput.spellcheck = false;
+                
+                document.body.appendChild(hiddenInput);
+                
+                // Adicionar eventos para capturar a entrada
+                hiddenInput.addEventListener('input', function(e) {
+                    if (systemState.stage === 'running' && !activeEditor && !isExecuting) {
+                        const input = hiddenInput.value;
+                        const lastChar = input.charAt(input.length - 1);
+                        
+                        if (lastChar) {
+                            insertText(lastChar);
+                        }
+                        
+                        // Limpar após processar
+                        hiddenInput.value = '';
                     }
                 });
-            });
+                
+                hiddenInput.addEventListener('keydown', function(e) {
+                    if (systemState.stage === 'running' && !activeEditor) {
+                        // Processar teclas especiais
+                        if (e.key === 'Backspace') {
+                            e.preventDefault();
+                            if (inputPosition > 0) {
+                                currentInput = currentInput.substring(0, inputPosition - 1) + currentInput.substring(inputPosition);
+                                inputPosition--;
+                                renderTerminal();
+                            }
+                        } else if (e.key === 'Enter') {
+                            e.preventDefault();
+                            processEnterKey();
+                        } else if (e.key === 'ArrowLeft') {
+                            e.preventDefault();
+                            if (inputPosition > 0) {
+                                inputPosition--;
+                                renderTerminal();
+                            }
+                        } else if (e.key === 'ArrowRight') {
+                            e.preventDefault();
+                            if (inputPosition < currentInput.length) {
+                                inputPosition++;
+                                renderTerminal();
+                            }
+                        } else if (e.key === 'ArrowUp') {
+                            e.preventDefault();
+                            if (historyPosition > 0) {
+                                historyPosition--;
+                                currentInput = inputHistory[historyPosition];
+                                inputPosition = currentInput.length;
+                                renderTerminal();
+                            }
+                        } else if (e.key === 'ArrowDown') {
+                            e.preventDefault();
+                            if (historyPosition < inputHistory.length - 1) {
+                                historyPosition++;
+                                currentInput = inputHistory[historyPosition];
+                                inputPosition = currentInput.length;
+                                renderTerminal();
+                            } else if (historyPosition === inputHistory.length - 1) {
+                                historyPosition = inputHistory.length;
+                                currentInput = '';
+                                inputPosition = 0;
+                                renderTerminal();
+                            }
+                        } else if (e.key === 'Tab') {
+                            e.preventDefault();
+                            autocomplete();
+                        }
+                    }
+                });
+            }
+            
+            return hiddenInput;
+        }
+
+        function focusTerminal() {
+            const hiddenInput = document.getElementById('hidden-input');
+            if (hiddenInput) {
+                hiddenInput.focus();
+            }
+        }
+        
+        function processEnterKey() {
+            const command = currentInput.trim();
+            
+            if (command) {
+                addOutput(`<span class="prompt">${currentState.currentUser}@${currentState.hostname}:${getCurrentDirDisplay()}${currentState.currentUser === 'root' ? '#' : '$'} </span>${command}`);
+                
+                inputHistory.push(command);
+                if (inputHistory.length > 100) inputHistory.shift();
+                historyPosition = inputHistory.length;
+                
+                executeCommand(command);
+            } else {
+                addOutput('');
+                renderPrompt();
+            }
+            
+            currentInput = '';
+            inputPosition = 0;
         }
 
         function startSystem() {
