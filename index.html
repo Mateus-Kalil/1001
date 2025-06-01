@@ -1,942 +1,2399 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Debian Terminal | MKalil</title>
-  <style>
-    body {
-      background: #000;
-      color: #0f0;
-      font-family: monospace;
-      margin: 0;
-      padding: 0;
-      overflow: hidden;
-    }
-    #terminal {
-      padding: 10px;
-      white-space: pre-wrap;
-      height: 100vh;
-      overflow-y: auto;
-    }
-    .input {
-      color: #0f0;
-    }
-    #signature {
-      position: fixed;
-      bottom: 5px;
-      right: 10px;
-      color: #0f0;
-      font-family: monospace;
-      font-size: 14px;
-      opacity: 0.7;
-    }
-    .blink {
-      display: inline-block;
-      width: 10px;
-      background: #0f0;
-      margin-left: 2px;
-      animation: blink 1s step-start 0s infinite;
-      vertical-align: bottom;
-    }
-    @keyframes blink {
-      50% { opacity: 0; }
-    }
-    /* Editor overlay */
-    #editor {
-      display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: #000;
-      z-index: 9999;
-      flex-direction: column;
-    }
-    #editor-header {
-      color: #0f0;
-      font-family: monospace;
-      padding: 5px;
-      border-bottom: 1px solid #0f0;
-    }
-    #editor-area {
-      width: 100%;
-      height: calc(100% - 30px);
-      background: #000;
-      color: #0f0;
-      font-family: monospace;
-      border: none;
-      resize: none;
-      padding: 5px;
-      outline: none;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terminal Debian Interativo</title>
+    <style>
+        :root {
+            --bg-color: #0a0b0c;
+            --terminal-bg: #000000;
+            --terminal-text: #00ff00;
+            --terminal-prompt: #00ff00;
+            --terminal-success: #00ff00;
+            --terminal-error: #ff0000;
+            --glow-color: rgba(0, 255, 0, 0.5);
+            --terminal-width: 800px;
+            --terminal-height: 500px;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            font-family: monospace;
+            color: var(--terminal-text);
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .background {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 30% 40%, rgba(0, 100, 0, 0.1) 0%, transparent 40%),
+                radial-gradient(circle at 70% 60%, rgba(0, 100, 0, 0.1) 0%, transparent 40%);
+            z-index: -1;
+        }
+
+        .grid {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(0, 50, 0, 0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 50, 0, 0.1) 1px, transparent 1px);
+            background-size: 20px 20px;
+            z-index: -1;
+        }
+
+        .floating-text {
+            position: absolute;
+            color: rgba(0, 255, 0, 0.2);
+            font-family: monospace;
+            font-size: 14px;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .particles {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
+
+        .particle {
+            position: absolute;
+            width: 2px;
+            height: 2px;
+            background-color: rgba(0, 255, 0, 0.4);
+            border-radius: 50%;
+        }
+
+        .container {
+            position: relative;
+            width: calc(var(--terminal-width) + 40px);
+            margin: 20px auto;
+            z-index: 1;
+        }
+
+        .terminal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(to right, #111, #222);
+            padding: 5px 10px;
+            border-top-left-radius: 10px;
+            border-top-right-radius: 10px;
+            border: 1px solid #444;
+            border-bottom: none;
+        }
+
+        .terminal-title {
+            font-size: 14px;
+            color: #ddd;
+        }
+
+        .terminal-controls {
+            display: flex;
+            gap: 5px;
+        }
+
+        .control-btn {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            border: none;
+        }
+
+        .control-btn.close {
+            background-color: #ff5f57;
+        }
+
+        .control-btn.minimize {
+            background-color: #ffbd2e;
+        }
+
+        .control-btn.maximize {
+            background-color: #28ca41;
+        }
+
+        .terminal-window {
+            position: relative;
+            width: var(--terminal-width);
+            height: var(--terminal-height);
+            background-color: var(--terminal-bg);
+            border-radius: 0 0 10px 10px;
+            box-shadow: 0 0 20px var(--glow-color);
+            overflow: hidden;
+            border: 1px solid #444;
+            animation: boot 2s ease-out;
+        }
+
+        .terminal {
+            width: 100%;
+            height: 100%;
+            padding: 10px;
+            box-sizing: border-box;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.4;
+            color: var(--terminal-text);
+            text-shadow: 0 0 5px rgba(0, 255, 0, 0.5);
+        }
+
+        .terminal-input {
+            background: transparent;
+            border: none;
+            outline: none;
+            color: var(--terminal-text);
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            width: calc(100% - 150px);
+            text-shadow: 0 0 5px rgba(0, 255, 0, 0.5);
+        }
+
+        .terminal-line {
+            white-space: pre-wrap;
+            word-break: break-all;
+            margin: 2px 0;
+        }
+
+        .prompt {
+            color: var(--terminal-prompt);
+        }
+
+        .success {
+            color: var(--terminal-success);
+        }
+
+        .error {
+            color: var(--terminal-error);
+        }
+
+        .scan-line {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background-color: rgba(0, 255, 0, 0.1);
+            animation: scan 6s linear infinite;
+            pointer-events: none;
+        }
+
+        .crt-effect {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(rgba(0, 0, 0, 0.1) 50%, rgba(0, 0, 0, 0.15) 50%);
+            background-size: 100% 4px;
+            pointer-events: none;
+        }
+
+        .flicker {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 50, 0, 0.03);
+            opacity: 0;
+            pointer-events: none;
+            animation: flicker 0.3s infinite;
+        }
+
+        .blinking-cursor {
+            display: inline-block;
+            width: 8px;
+            height: 16px;
+            background-color: var(--terminal-text);
+            animation: blink 1s infinite;
+            vertical-align: middle;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background-color: rgba(0, 20, 0, 0.5);
+            border-radius: 10px;
+            margin-top: 20px;
+            box-shadow: 0 0 10px var(--glow-color);
+        }
+
+        .tty-selection {
+            display: flex;
+            gap: 10px;
+        }
+
+        .tty-btn {
+            background: #111;
+            color: #00ff00;
+            border: 1px solid #00aa00;
+            border-radius: 4px;
+            padding: 5px 10px;
+            cursor: pointer;
+            font-family: monospace;
+            transition: all 0.2s;
+        }
+
+        .tty-btn:hover, .tty-btn.active {
+            background: #00aa00;
+            color: #000;
+        }
+
+        .save-controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        .save-toggle {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+
+        .save-toggle input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .save-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #333;
+            transition: .4s;
+            border-radius: 24px;
+        }
+
+        .save-slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .save-slider {
+            background-color: #00aa00;
+        }
+
+        input:checked + .save-slider:before {
+            transform: translateX(26px);
+        }
+
+        .btn {
+            background: #111;
+            color: #00ff00;
+            border: 1px solid #00aa00;
+            border-radius: 4px;
+            padding: 5px 10px;
+            cursor: pointer;
+            font-family: monospace;
+            transition: all 0.2s;
+        }
+
+        .btn:hover {
+            background: #00aa00;
+            color: #000;
+        }
+
+        .save-label {
+            font-size: 12px;
+            color: #00ff00;
+        }
+
+        .footer {
+            position: absolute;
+            bottom: 10px;
+            text-align: center;
+            color: #00aa00;
+            font-size: 12px;
+            width: 100%;
+            z-index: 10;
+        }
+
+        /* Loading spinner */
+        .loading {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 100;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(0, 255, 0, 0.3);
+            border-radius: 50%;
+            border-top: 4px solid #00ff00;
+            animation: spin 1s linear infinite;
+        }
+
+        /* Animações */
+        @keyframes boot {
+            0% {
+                opacity: 0;
+                filter: brightness(2);
+            }
+            20% {
+                opacity: 0.7;
+                filter: brightness(2);
+            }
+            30% {
+                opacity: 0.5;
+                filter: brightness(1);
+            }
+            40% {
+                opacity: 0.8;
+                filter: brightness(1.5);
+            }
+            50% {
+                opacity: 0.6;
+                filter: brightness(1);
+            }
+            100% {
+                opacity: 1;
+                filter: brightness(1);
+            }
+        }
+
+        @keyframes scan {
+            0% {
+                top: 0%;
+            }
+            100% {
+                top: 100%;
+            }
+        }
+
+        @keyframes blink {
+            0%, 49% {
+                opacity: 1;
+            }
+            50%, 100% {
+                opacity: 0;
+            }
+        }
+
+        @keyframes flicker {
+            0%, 100% {
+                opacity: 0;
+            }
+            50% {
+                opacity: 1;
+            }
+        }
+
+        @keyframes float {
+            0% {
+                transform: translateY(0px);
+            }
+            50% {
+                transform: translateY(-10px);
+            }
+            100% {
+                transform: translateY(0px);
+            }
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Efeitos de distorção do monitor */
+        .glitch {
+            animation: glitch 5s infinite;
+        }
+
+        @keyframes glitch {
+            0%, 95%, 100% {
+                transform: skew(0deg);
+                filter: brightness(1);
+            }
+            96% {
+                transform: skew(2deg);
+                filter: brightness(1.2);
+            }
+            97% {
+                transform: skew(-2deg);
+                filter: brightness(0.8);
+            }
+            98% {
+                transform: skew(1deg);
+                filter: brightness(1.1);
+            }
+            99% {
+                transform: skew(-1deg);
+                filter: brightness(0.9);
+            }
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: #0a0b0c;
+            padding: 20px;
+            border-radius: 10px;
+            width: 80%;
+            max-width: 600px;
+            max-height: 80%;
+            overflow-y: auto;
+            border: 1px solid #00aa00;
+            box-shadow: 0 0 20px var(--glow-color);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #00aa00;
+            padding-bottom: 10px;
+        }
+
+        .modal-title {
+            color: #00ff00;
+            font-size: 18px;
+        }
+
+        .close-modal {
+            color: #00ff00;
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+        }
+
+        .history-item {
+            padding: 10px;
+            margin: 5px 0;
+            background-color: #111;
+            border-radius: 5px;
+            cursor: pointer;
+            border: 1px solid #333;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .history-item:hover {
+            background-color: #222;
+            border-color: #00aa00;
+        }
+
+        .history-name {
+            color: #00ff00;
+        }
+
+        .history-date {
+            color: #888;
+            font-size: 12px;
+        }
+
+        .delete-history {
+            color: #ff0000;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .no-history {
+            color: #888;
+            text-align: center;
+            padding: 20px;
+        }
+    </style>
 </head>
 <body>
-  <div id="terminal"></div>
-  <div id="signature">MKalil</div>
+    <div class="background"></div>
+    <div class="grid"></div>
+    <div class="particles" id="particles"></div>
 
-  <div id="editor">
-    <div id="editor-header">NANO. Ctrl+S salvar, Ctrl+Q sair.</div>
-    <textarea id="editor-area" spellcheck="false"></textarea>
-  </div>
+    <div class="container">
+        <div class="terminal-header">
+            <div class="terminal-controls">
+                <button class="control-btn close"></button>
+                <button class="control-btn minimize"></button>
+                <button class="control-btn maximize"></button>
+            </div>
+            <div class="terminal-title">Terminal Debian</div>
+            <div></div>
+        </div>
+        <div class="terminal-window">
+            <div class="scan-line"></div>
+            <div class="crt-effect"></div>
+            <div class="flicker"></div>
+            <div class="terminal" id="terminal">
+                <!-- Conteúdo do terminal será adicionado aqui -->
+            </div>
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+            </div>
+        </div>
+    </div>
 
-  <script>
-    (function() {
-      const term = document.getElementById('terminal');
-      const editorOverlay = document.getElementById('editor');
-      const editorArea = document.getElementById('editor-area');
+    <div class="controls">
+        <div class="tty-selection">
+            <button class="tty-btn active" data-tty="1">TTY1</button>
+            <button class="tty-btn" data-tty="2">TTY2</button>
+            <button class="tty-btn" data-tty="3">TTY3</button>
+            <button class="tty-btn" data-tty="4">TTY4</button>
+            <button class="tty-btn" data-tty="5">TTY5</button>
+            <button class="tty-btn" data-tty="6">TTY6</button>
+        </div>
+        <div class="save-controls">
+            <div>
+                <label class="save-toggle">
+                    <input type="checkbox" id="autoSaveToggle">
+                    <span class="save-slider"></span>
+                </label>
+                <span class="save-label">Auto-salvar</span>
+            </div>
+            <button class="btn" id="saveBtn">Salvar</button>
+            <button class="btn" id="loadBtn">Carregar</button>
+            <button class="btn" id="resetBtn">Resetar</button>
+        </div>
+    </div>
 
-      let currentLine = '';
-      let inputSpan = null;
-      let loginState = 'login_username';
-      let tempUsername = '';
-      let currentUser = '';
-      let currentPath = '/home/root';
-      let currentTTY = 1;
-      let isPasswordPrompt = false;
-      let poweredOff = false;
-      let isInEditor = false;
-      let editorFilename = '';
-      let historyList = [];
-      let skipNextPrompt = false;
-      // Pacotes instalados, nano já disponível
-      const installedPackages = new Set(['nano']);
+    <div class="modal" id="historyModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Histórico de Sessões</div>
+                <button class="close-modal" id="closeModal">&times;</button>
+            </div>
+            <div id="historyList">
+                <!-- Os itens do histórico serão adicionados aqui -->
+            </div>
+        </div>
+    </div>
 
-      const fileSystem = {
-        '/': ['boot','bin','dev','etc','home','lib','media','mnt','opt','proc','root','sbin','srv','sys','tmp','usr','var'],
-        '/boot': [],
-        '/bin': [],
-        '/dev': [],
-        '/etc': ['network','hosts'],
-        '/etc/network': ['interfaces'],
-        '/etc/network/interfaces': [],
-        '/etc/hosts': [],
-        '/home': ['root'],
-        '/home/root': [],
-        '/lib': [],
-        '/media': [],
-        '/mnt': [],
-        '/opt': [],
-        '/proc': [],
-        '/root': [],
-        '/sbin': [],
-        '/srv': [],
-        '/sys': [],
-        '/tmp': [],
-        '/usr': ['bin','sbin','lib','share'],
-        '/usr/bin': [],
-        '/usr/sbin': [],
-        '/usr/lib': [],
-        '/usr/share': [],
-        '/var': ['log','tmp'],
-        '/var/log': [],
-        '/var/tmp': []
-      };
-      const fileContents = {
-        '/etc/network/interfaces': 
-`# This file describes the network interfaces available on your system
-# and how to activate them. For more information, see interfaces(5).
+    <div class="footer">
+        &copy; 2025 MKalil - Terminal Debian Interativo
+    </div>
 
-auto enp0s8
-iface enp0s8 inet static
-    address 10.3.46.113/24
-`,
-        '/etc/hosts': 
-`127.0.0.1   localhost
-127.0.1.1   debian
-`
-      };
-      const dirDesc = {
-        boot: 'Arquivos de inicialização do Sistema',
-        bin: 'Os binários (programas que o usuário comum pode executar)',
-        dev: 'Local onde o sistema reconhece os dispositivos (HW)',
-        etc: 'Local onde encontramos os arquivos de configuração',
-        home: 'Local onde encontramos os diretórios pessoais dos usuários comuns',
-        lib: 'Local onde encontramos as bibliotecas compartilhadas',
-        media: 'Local onde montamos os dispositivos de mídia removível',
-        mnt: 'Local onde montamos os compartilhamentos de rede',
-        opt: 'Local onde instalamos programas opcionais (interface gráfica)',
-        proc: 'Pseudo Sistema de Arquivos virtual, onde encontramos informações sobre processamento',
-        root: 'Local onde encontramos os arquivos pessoais do root',
-        sbin: 'Os binários do super usuário (somente o root pode executar)',
-        srv: 'Local onde encontramos arquivos referentes aos serviços',
-        sys: 'Pseudo Sistema de arquivos virtual que contém informações vindas do /dev e do /proc',
-        tmp: 'Local onde encontramos os arquivos temporários',
-        usr: 'Local onde encontramos de uso do usuário (manuais, ajuda, int. Gráfica – dados estáticos)',
-        var: 'Local onde encontramos os dados variáveis (logs, emails, banco de dados)',
-        network: 'Subdiretório de configuração de rede'
-      };
-
-      function print(text) {
-        term.innerHTML += text;
-        term.scrollTop = term.scrollHeight;
-      }
-      function println(text = '') {
-        print(text + '\n');
-      }
-      function createInput() {
-        inputSpan = document.createElement('span');
-        inputSpan.className = 'input';
-        term.appendChild(inputSpan);
-        const blink = document.createElement('span');
-        blink.className = 'blink';
-        term.appendChild(blink);
-        term.scrollTop = term.scrollHeight;
-      }
-      function removeInput() {
-        if (inputSpan) {
-          const next = inputSpan.nextSibling;
-          if (next && next.className === 'blink') {
-            term.removeChild(next);
-          }
-          inputSpan = null;
-        }
-      }
-
-      function showLoginPrompt() {
-        println('Debian GNU/Linux 11 debian tty' + currentTTY);
-        println('');
-        print('debian login: ');
-        createInput();
-        isPasswordPrompt = false;
-        loginState = 'login_username';
-      }
-
-      function newPrompt() {
-        print(currentUser + '@debian:' + currentPath + (currentUser === 'root' ? '#' : '$') + ' ');
-        createInput();
-        isPasswordPrompt = false;
-      }
-
-      function resolvePath(path) {
-        if (path.startsWith('/')) {
-          if (path.endsWith('/') && path !== '/') path = path.slice(0, -1);
-          return path === '' ? '/' : path;
-        } else if (path === '..') {
-          if (currentPath !== '/') {
-            const parts = currentPath.split('/');
-            parts.pop();
-            return parts.join('/') || '/';
-          }
-          return currentPath;
-        } else if (path === '.') {
-          return currentPath;
-        } else {
-          const candidate = (currentPath === '/' ? '/' + path : currentPath + '/' + path);
-          return candidate.replace(/\/+/g, '/');
-        }
-      }
-
-      function pathExists(p) {
-        if (fileSystem[p] !== undefined) return 'dir';
-        if (fileContents[p] !== undefined) return 'file';
-        return false;
-      }
-
-      function ensureParentDir(p) {
-        const idx = p.lastIndexOf('/');
-        const parent = idx > 0 ? p.slice(0, idx) : '/';
-        const name = p.slice(idx + 1);
-        if (fileSystem[parent] && !fileSystem[parent].includes(name)) {
-          fileSystem[parent].push(name);
-        }
-      }
-
-      function openEditor(filename) {
-        isInEditor = true;
-        removeInput();
-        const fullPath = resolvePath(filename);
-        editorFilename = fullPath;
-        editorArea.value = fileContents[fullPath] || '';
-        editorOverlay.style.display = 'flex';
-        editorArea.focus();
-      }
-
-      function saveEditor() {
-        const content = editorArea.value;
-        fileContents[editorFilename] = content;
-        ensureParentDir(editorFilename);
-        const numLines = content.split('\n').length;
-        exitEditor();
-        println(`[ Wrote ${numLines} lines to ${editorFilename} ]`);
-        setTimeout(newPrompt, 100);
-      }
-
-      function exitEditor() {
-        isInEditor = false;
-        editorOverlay.style.display = 'none';
-        editorArea.blur();
-      }
-
-      function simulateInstall(pkg) {
-        skipNextPrompt = true;
-        println('Reading package lists... Done');
-        println('Building dependency tree... Done');
-        println('Reading state information... Done');
-        println(`The following NEW packages will be installed:`);
-        println(`  ${pkg}`);
-        println('0 upgraded, 1 newly installed, 0 to remove and 0 not upgraded.');
-        println('Need to get 1,234 kB of archives.');
-        println('After this operation, 4,567 kB of additional disk space will be used.');
-        println('Do you want to continue? [Y/n] ');
-        // Espera Enter do usuário
-        let buffer = '';
-        const handleKey = function(e) {
-          if (e.key === 'Enter') {
-            e.preventDefault();
-            document.removeEventListener('keydown', handleKey);
-            buffer = '';
-            println('');
-            // Simula o progresso de download e instalação
-            const steps = [
-              `Get:1 http://ftp.debian.org/debian bookworm/main amd64 ${pkg} amd64 1.0.0 [1,234 kB]`,
-              'Fetched 1,234 kB in 1s (1,234 kB/s)',
-              `Selecting previously unselected package ${pkg}.`,
-              '(Reading database ... 123456 files and directories currently installed.)',
-              `Preparing to unpack .../${pkg}_1.0.0_amd64.deb ...`,
-              `Unpacking ${pkg} (1.0.0) ...`,
-              `Setting up ${pkg} (1.0.0) ...`,
-              'Processing triggers for man-db (2.10.2-1) ...'
-            ];
-            let i = 0;
-            function printStep() {
-              if (i < steps.length) {
-                println(steps[i]);
-                i++;
-                setTimeout(printStep, 500);
-              } else {
-                installedPackages.add(pkg);
-                skipNextPrompt = false;
-                setTimeout(newPrompt, 100);
-              }
+    <script>
+        // Sistema de arquivos simulado
+        const filesystem = {
+            '/': {
+                type: 'd',
+                permissions: 'drwxr-xr-x',
+                owner: 'root',
+                group: 'root',
+                content: {},
+                date: '2025-05-15 08:00'
             }
-            printStep();
-          } else if (e.key.length === 1) {
-            e.preventDefault();
-            buffer += e.key;
-          }
         };
-        document.addEventListener('keydown', handleKey);
-      }
 
-      function processCommand(cmd) {
-        const args = cmd.trim().split(/\s+/);
-        const command = args[0];
-        switch(command) {
-          case 'whoami':
-            println(currentUser);
-            break;
+        // Inicializar sistema de arquivos padrão
+        const defaultDirs = [
+            'boot', 'bin', 'dev', 'etc', 'home', 'lib', 'media', 
+            'mnt', 'opt', 'proc', 'root', 'sbin', 'srv', 'sys', 
+            'tmp', 'usr', 'var'
+        ];
 
-          case 'tty':
-            println('/dev/tty' + currentTTY);
-            break;
+        // Função para criar estrutura inicial do sistema de arquivos
+        function initializeFilesystem() {
+            defaultDirs.forEach(dir => {
+                filesystem['/'][dir] = {
+                    type: 'd',
+                    permissions: 'drwxr-xr-x',
+                    owner: 'root',
+                    group: 'root',
+                    content: {},
+                    date: '2025-05-15 08:00'
+                };
+            });
 
-          case 'pwd':
-            println(currentPath);
-            break;
+            // Adicionar alguns arquivos básicos
+            filesystem['/']['etc']['passwd'] = {
+                type: '-',
+                permissions: '-rw-r--r--',
+                owner: 'root',
+                group: 'root',
+                content: 'root:x:0:0:root:/root:/bin/bash\nnobody:x:65534:65534:nobody:/nonexistent:/usr/sbin/nologin',
+                date: '2025-05-15 08:00'
+            };
 
-          case 'clear':
-            term.innerHTML = '';
-            return;
+            filesystem['/']['etc']['hostname'] = {
+                type: '-',
+                permissions: '-rw-r--r--',
+                owner: 'root',
+                group: 'root',
+                content: 'debian',
+                date: '2025-05-15 08:00'
+            };
 
-          case 'ls': {
-              let target = currentPath;
-              let long = false;
-              let human = false;
-              for (let i = 1; i < args.length; i++) {
-                if (args[i] === '-l') long = true;
-                if (args[i] === '-h') human = true;
-                if (!args[i].startsWith('-')) target = resolvePath(args[i]);
-              }
-              if (long && target === '/') {
-                fileSystem['/'].forEach(name => {
-                  const type = 'd';
-                  const desc = dirDesc[name] ? '  # ' + dirDesc[name] : '';
-                  println(type + 'rwxr-xr-x 2 root root 4.0K Jan  1 00:00 ' + name + desc);
+            filesystem['/']['home']['user'] = {
+                type: 'd',
+                permissions: 'drwxr-xr-x',
+                owner: 'user',
+                group: 'user',
+                content: {},
+                date: '2025-05-15 08:00'
+            };
+
+            // Criar arquivo sources.list
+            filesystem['/']['etc']['apt'] = {
+                type: 'd',
+                permissions: 'drwxr-xr-x',
+                owner: 'root',
+                group: 'root',
+                content: {},
+                date: '2025-05-15 08:00'
+            };
+
+            filesystem['/']['etc']['apt']['sources.list'] = {
+                type: '-',
+                permissions: '-rw-r--r--',
+                owner: 'root',
+                group: 'root',
+                content: 'deb http://deb.debian.org/debian bookworm main',
+                date: '2025-05-15 08:00'
+            };
+
+            filesystem['/']['etc']['network'] = {
+                type: 'd',
+                permissions: 'drwxr-xr-x',
+                owner: 'root',
+                group: 'root',
+                content: {},
+                date: '2025-05-15 08:00'
+            };
+
+            filesystem['/']['etc']['network']['interfaces'] = {
+                type: '-',
+                permissions: '-rw-r--r--',
+                owner: 'root',
+                group: 'root',
+                content: '# This file describes the network interfaces available on your system\n# and how to activate them. For more information, see interfaces(5).\n\nsource /etc/network/interfaces.d/*\n\n# The loopback network interface\nauto lo\niface lo inet loopback\n\n# The primary network interface\nallow-hotplug enp0s3\niface enp0s3 inet dhcp',
+                date: '2025-05-15 08:00'
+            };
+        }
+
+        // Pacotes disponíveis
+        const availablePackages = {
+            'vim': {
+                version: '8.2.3995',
+                size: '3.2MB',
+                description: 'Vi IMproved - enhanced vi editor',
+                installed: false,
+                dependencies: []
+            },
+            'nano': {
+                version: '6.4',
+                size: '1.5MB',
+                description: 'small, friendly text editor inspired by Pico',
+                installed: false,
+                dependencies: []
+            },
+            'apache2': {
+                version: '2.4.56',
+                size: '8.5MB',
+                description: 'Apache HTTP Server',
+                installed: false,
+                dependencies: ['libapache2-mod-php']
+            },
+            'php': {
+                version: '8.2.0',
+                size: '5.2MB',
+                description: 'server-side, HTML-embedded scripting language',
+                installed: false,
+                dependencies: []
+            },
+            'libapache2-mod-php': {
+                version: '8.2.0',
+                size: '3.4MB',
+                description: 'server-side, HTML-embedded scripting language (Apache 2 module)',
+                installed: false,
+                dependencies: ['php']
+            },
+            'mysql-server': {
+                version: '8.0.32',
+                size: '12.7MB',
+                description: 'MySQL database server',
+                installed: false,
+                dependencies: []
+            },
+            'nginx': {
+                version: '1.22.1',
+                size: '7.8MB',
+                description: 'small, powerful, scalable web/proxy server',
+                installed: false,
+                dependencies: []
+            },
+            'python3': {
+                version: '3.11.2',
+                size: '4.6MB',
+                description: 'interactive high-level object-oriented language',
+                installed: false,
+                dependencies: []
+            },
+            'git': {
+                version: '2.39.2',
+                size: '9.3MB',
+                description: 'fast, scalable, distributed revision control system',
+                installed: false,
+                dependencies: []
+            },
+            'openssh-server': {
+                version: '9.2p1',
+                size: '2.8MB',
+                description: 'secure shell (SSH) server, for secure access from remote machines',
+                installed: false,
+                dependencies: []
+            },
+            'nodejs': {
+                version: '18.13.0',
+                size: '11.2MB',
+                description: 'evented I/O for V8 javascript - runtime executable',
+                installed: false,
+                dependencies: []
+            },
+            'curl': {
+                version: '7.88.1',
+                size: '1.2MB',
+                description: 'command line tool for transferring data with URL syntax',
+                installed: false,
+                dependencies: []
+            },
+            'wget': {
+                version: '1.21.3',
+                size: '2.1MB',
+                description: 'retrieves files from the web',
+                installed: false,
+                dependencies: []
+            }
+        };
+
+        // Inicializa as TTYs
+        const ttys = {
+            1: { history: [], currentDir: '/root', user: 'root', hostname: 'debian', output: [] },
+            2: { history: [], currentDir: '/root', user: 'root', hostname: 'debian', output: [] },
+            3: { history: [], currentDir: '/root', user: 'root', hostname: 'debian', output: [] },
+            4: { history: [], currentDir: '/root', user: 'root', hostname: 'debian', output: [] },
+            5: { history: [], currentDir: '/root', user: 'root', hostname: 'debian', output: [] },
+            6: { history: [], currentDir: '/root', user: 'root', hostname: 'debian', output: [] }
+        };
+
+        // Estado atual do sistema
+        let currentState = {
+            currentTTY: 1,
+            networkInterfaces: {
+                lo: {
+                    status: 'up',
+                    address: '127.0.0.1',
+                    netmask: '255.0.0.0'
+                },
+                enp0s3: {
+                    status: 'up',
+                    address: '10.0.2.15',
+                    netmask: '255.255.255.0'
+                },
+                enp0s8: {
+                    status: 'down',
+                    address: '',
+                    netmask: ''
+                }
+            },
+            runningProcesses: [],
+            installedPackages: {},
+            users: {
+                'root': {
+                    password: 'x',
+                    uid: 0,
+                    gid: 0,
+                    home: '/root',
+                    shell: '/bin/bash'
+                },
+                'user': {
+                    password: 'x',
+                    uid: 1000,
+                    gid: 1000,
+                    home: '/home/user',
+                    shell: '/bin/bash'
+                }
+            },
+            currentUser: 'root',
+            hostname: 'debian',
+            uptime: 0,
+            bootTime: new Date().getTime(),
+            kernel: {
+                version: '5.10.0-21-amd64',
+                status: 'running'
+            },
+            grub: {
+                status: 'healthy',
+                config: 'default'
+            },
+            aptUpdated: false
+        };
+
+        // Elementos DOM
+        const terminal = document.getElementById('terminal');
+        const loadingElement = document.getElementById('loading');
+        const ttyButtons = document.querySelectorAll('.tty-btn');
+        const autoSaveToggle = document.getElementById('autoSaveToggle');
+        const saveBtn = document.getElementById('saveBtn');
+        const loadBtn = document.getElementById('loadBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const historyModal = document.getElementById('historyModal');
+        const historyList = document.getElementById('historyList');
+        const closeModal = document.getElementById('closeModal');
+
+        // Variáveis de controle
+        let isExecuting = false;
+        let currentInput = '';
+        let inputPosition = 0;
+        let inputHistory = [];
+        let historyPosition = -1;
+        let autoSave = false;
+        let activeEditor = null;
+
+        // Inicialização
+        window.onload = function() {
+            initializeFilesystem();
+            renderTerminal();
+            createParticles();
+            createFloatingText();
+            
+            // Verificar se existe algum estado salvo
+            autoSaveToggle.checked = localStorage.getItem('debianTerminalAutoSave') === 'true';
+            autoSave = autoSaveToggle.checked;
+            
+            if (autoSave && localStorage.getItem('debianTerminalState')) {
+                try {
+                    const savedState = JSON.parse(localStorage.getItem('debianTerminalState'));
+                    restoreState(savedState);
+                } catch (e) {
+                    console.error('Erro ao restaurar estado:', e);
+                }
+            } else {
+                // Iniciar com mensagem de boot
+                bootSystem();
+            }
+        };
+
+        // Função para criar partículas flutuantes
+        function createParticles() {
+            const particlesContainer = document.getElementById('particles');
+            const numParticles = 50;
+            
+            for (let i = 0; i < numParticles; i++) {
+                const particle = document.createElement('div');
+                particle.classList.add('particle');
+                
+                // Posição aleatória
+                const x = Math.random() * 100;
+                const y = Math.random() * 100;
+                
+                particle.style.left = `${x}%`;
+                particle.style.top = `${y}%`;
+                
+                // Animação aleatória
+                const duration = 3 + Math.random() * 7;
+                const delay = Math.random() * 5;
+                
+                particle.style.animation = `float ${duration}s ease-in-out ${delay}s infinite`;
+                particle.style.opacity = 0.2 + Math.random() * 0.3;
+                
+                particlesContainer.appendChild(particle);
+            }
+        }
+
+        // Função para criar texto flutuante
+        function createFloatingText() {
+            const container = document.body;
+            const terms = [
+                'sudo', 'apt', 'ls -la', 'chmod', 'grep', 'awk', 'sed',
+                'systemctl', 'journalctl', 'cat', 'find', 'cd', 'mv',
+                'cp', 'mkdir', 'rm -rf', 'ifconfig', 'ssh', 'tar', 'wget'
+            ];
+            
+            for (let i = 0; i < 15; i++) {
+                const floatingText = document.createElement('div');
+                floatingText.classList.add('floating-text');
+                
+                const x = Math.random() * 100;
+                const y = Math.random() * 100;
+                floatingText.style.left = `${x}%`;
+                floatingText.style.top = `${y}%`;
+                
+                const term = terms[Math.floor(Math.random() * terms.length)];
+                floatingText.textContent = term;
+                
+                const duration = 10 + Math.random() * 20;
+                const delay = Math.random() * 5;
+                floatingText.style.animation = `float ${duration}s ease-in-out ${delay}s infinite`;
+                
+                container.appendChild(floatingText);
+            }
+        }
+
+        // Simula o processo de boot do sistema
+        function bootSystem() {
+            const bootMessages = [
+                { text: 'Booting Debian GNU/Linux...', delay: 500 },
+                { text: 'Loading Linux 5.10.0-21-amd64...', delay: 800 },
+                { text: 'Loading initial ramdisk...', delay: 1000 },
+                { text: 'Starting systemd...', delay: 500 },
+                { text: 'Starting Journal Service...', delay: 300 },
+                { text: 'Starting Device-mapper event daemon...', delay: 200 },
+                { text: 'Starting Network Manager...', delay: 400 },
+                { text: 'Starting Login Service...', delay: 300 },
+                { text: 'Reached target Basic System.', delay: 200 },
+                { text: 'Reached target Graphical Interface.', delay: 500 },
+                { text: 'Starting GNOME Display Manager...', delay: 400 },
+                { text: 'Debian GNU/Linux 12 debian tty1', delay: 800 },
+                { text: '', delay: 300 },
+                { text: 'debian login: root', delay: 500 },
+                { text: 'Password: ********', delay: 500 },
+                { text: '', delay: 300 },
+                { text: 'Last login: Sun Jun 01 08:30:45 UTC 2025 from localhost', delay: 300 }
+            ];
+            
+            let totalDelay = 0;
+            
+            bootMessages.forEach((msg, index) => {
+                totalDelay += msg.delay;
+                setTimeout(() => {
+                    addOutput(msg.text, 'boot');
+                    
+                    // Se for o último, renderize o prompt
+                    if (index === bootMessages.length - 1) {
+                        renderPrompt();
+                    }
+                }, totalDelay);
+            });
+        }
+
+        // Manipulação do terminal
+        function renderTerminal() {
+            terminal.innerHTML = '';
+            
+            // Adicionar linhas de saída
+            ttys[currentState.currentTTY].output.forEach(line => {
+                const lineElement = document.createElement('div');
+                lineElement.className = `terminal-line ${line.type || ''}`;
+                lineElement.innerHTML = line.text;
+                terminal.appendChild(lineElement);
+            });
+            
+            // Adicionar linha atual com prompt e input
+            renderPrompt();
+            
+            // Rolar para o fim
+            terminal.scrollTop = terminal.scrollHeight;
+        }
+
+        function renderPrompt() {
+            const promptLine = document.createElement('div');
+            promptLine.className = 'terminal-line';
+            
+            const currentTTY = ttys[currentState.currentTTY];
+            const promptText = `${currentState.currentUser}@${currentState.hostname}:${getCurrentDirDisplay()}${currentState.currentUser === 'root' ? '#' : '$'} `;
+            
+            promptLine.innerHTML = `<span class="prompt">${promptText}</span>`;
+            
+            const inputSpan = document.createElement('span');
+            inputSpan.innerHTML = currentInput;
+            promptLine.appendChild(inputSpan);
+            
+            const cursor = document.createElement('span');
+            cursor.className = 'blinking-cursor';
+            promptLine.appendChild(cursor);
+            
+            terminal.appendChild(promptLine);
+            
+            // Evento de foco
+            window.addEventListener('click', function() {
+                cursor.classList.add('blinking-cursor');
+            });
+        }
+
+        function getCurrentDirDisplay() {
+            const currentDir = ttys[currentState.currentTTY].currentDir;
+            
+            // Se estivermos no diretório pessoal do usuário, exibir ~
+            if (currentState.currentUser === 'root' && currentDir === '/root') {
+                return '~';
+            } else if (currentDir.startsWith('/home/' + currentState.currentUser)) {
+                return '~' + currentDir.substring(('/home/' + currentState.currentUser).length);
+            }
+            
+            return currentDir;
+        }
+
+        function addOutput(text, type = '') {
+            const line = { text, type };
+            ttys[currentState.currentTTY].output.push(line);
+            
+            // Limitar o histórico de saída para evitar uso excessivo de memória
+            if (ttys[currentState.currentTTY].output.length > 1000) {
+                ttys[currentState.currentTTY].output.shift();
+            }
+            
+            renderTerminal();
+            
+            // Auto-salvar se ativado
+            if (autoSave) {
+                saveState();
+            }
+        }
+
+        // Funções para manipulação de entrada
+        function handleInput(event) {
+            if (isExecuting) return;
+            
+            if (event.key === 'Enter') {
+                const command = currentInput.trim();
+                
+                if (command) {
+                    addOutput(`<span class="prompt">${currentState.currentUser}@${currentState.hostname}:${getCurrentDirDisplay()}${currentState.currentUser === 'root' ? '#' : '$'} </span>${command}`);
+                    
+                    // Adicionar ao histórico
+                    inputHistory.push(command);
+                    if (inputHistory.length > 100) inputHistory.shift();
+                    historyPosition = inputHistory.length;
+                    
+                    // Executar comando
+                    executeCommand(command);
+                } else {
+                    // Linha vazia, apenas mostrar outro prompt
+                    addOutput('');
+                }
+                
+                currentInput = '';
+                inputPosition = 0;
+            } else if (event.key === 'Backspace') {
+                if (inputPosition > 0) {
+                    currentInput = currentInput.substring(0, inputPosition - 1) + currentInput.substring(inputPosition);
+                    inputPosition--;
+                    renderTerminal();
+                }
+            } else if (event.key === 'Delete') {
+                if (inputPosition < currentInput.length) {
+                    currentInput = currentInput.substring(0, inputPosition) + currentInput.substring(inputPosition + 1);
+                    renderTerminal();
+                }
+            } else if (event.key === 'ArrowLeft') {
+                if (inputPosition > 0) {
+                    inputPosition--;
+                    renderTerminal();
+                }
+            } else if (event.key === 'ArrowRight') {
+                if (inputPosition < currentInput.length) {
+                    inputPosition++;
+                    renderTerminal();
+                }
+            } else if (event.key === 'ArrowUp') {
+                if (historyPosition > 0) {
+                    historyPosition--;
+                    currentInput = inputHistory[historyPosition];
+                    inputPosition = currentInput.length;
+                    renderTerminal();
+                }
+            } else if (event.key === 'ArrowDown') {
+                if (historyPosition < inputHistory.length - 1) {
+                    historyPosition++;
+                    currentInput = inputHistory[historyPosition];
+                    inputPosition = currentInput.length;
+                    renderTerminal();
+                } else if (historyPosition === inputHistory.length - 1) {
+                    historyPosition = inputHistory.length;
+                    currentInput = '';
+                    inputPosition = 0;
+                    renderTerminal();
+                }
+            } else if (event.key === 'Tab') {
+                event.preventDefault();
+                // Implementar auto-completar
+                autocomplete();
+            } else if (event.key === 'c' && event.ctrlKey) {
+                if (isExecuting) {
+                    // Interromper comando em execução
+                    isExecuting = false;
+                    addOutput('^C', 'error');
+                    renderPrompt();
+                } else {
+                    // Limpar linha atual
+                    currentInput = '';
+                    inputPosition = 0;
+                    addOutput('^C');
+                    renderTerminal();
+                }
+            } else if (event.key === 'l' && event.ctrlKey) {
+                // Clear screen
+                ttys[currentState.currentTTY].output = [];
+                renderTerminal();
+            } else if (event.key.length === 1 && !event.ctrlKey && !event.altKey && !event.metaKey) {
+                // Caractere normal
+                currentInput = currentInput.substring(0, inputPosition) + event.key + currentInput.substring(inputPosition);
+                inputPosition++;
+                renderTerminal();
+            }
+            
+            // ALT+F1 até ALT+F6 para mudar de TTY
+            if (event.altKey && event.key.startsWith('F')) {
+                const ttyNum = parseInt(event.key.substring(1));
+                if (ttyNum >= 1 && ttyNum <= 6) {
+                    switchTTY(ttyNum);
+                }
+            }
+        }
+
+        function autocomplete() {
+            const args = currentInput.split(' ');
+            const lastArg = args[args.length - 1];
+            
+            // Se começar com /, tentar completar caminhos
+            if (lastArg.startsWith('/')) {
+                // TODO: Implementar autocompletar de caminhos
+            } else if (args.length === 1) {
+                // Tentar completar comandos
+                const possibleCommands = [
+                    'ls', 'cd', 'pwd', 'cat', 'echo', 'mkdir', 'rm', 'cp', 'mv',
+                    'whoami', 'apt', 'vi', 'vim', 'nano', 'clear', 'ip', 'reboot',
+                    'poweroff', 'su', 'grep', 'find', 'chmod', 'chown', 'tty'
+                ];
+                
+                const matches = possibleCommands.filter(cmd => cmd.startsWith(lastArg));
+                
+                if (matches.length === 1) {
+                    // Um único comando encontrado
+                    currentInput = matches[0];
+                    inputPosition = currentInput.length;
+                    renderTerminal();
+                } else if (matches.length > 1) {
+                    // Vários comandos, mostrar opções
+                    addOutput('');
+                    addOutput(matches.join('  '));
+                    addOutput('');
+                    renderPrompt();
+                }
+            }
+        }
+
+        // Funções para comandos
+        function executeCommand(commandLine) {
+            // Separar comando e argumentos
+            const args = commandLine.split(' ');
+            const command = args[0].toLowerCase();
+            args.shift(); // Remove o comando dos argumentos
+            
+            isExecuting = true;
+            
+            // Simulação de tempo de execução
+            setTimeout(() => {
+                // Executar o comando correspondente
+                switch (command) {
+                    case 'ls':
+                        cmdLs(args);
+                        break;
+                    case 'cd':
+                        cmdCd(args);
+                        break;
+                    case 'pwd':
+                        cmdPwd();
+                        break;
+                    case 'cat':
+                        cmdCat(args);
+                        break;
+                    case 'whoami':
+                        cmdWhoami();
+                        break;
+                    case 'tty':
+                        cmdTty();
+                        break;
+                    case 'echo':
+                        cmdEcho(args);
+                        break;
+                    case 'clear':
+                        cmdClear();
+                        break;
+                    case 'mkdir':
+                        cmdMkdir(args);
+                        break;
+                    case 'rm':
+                        cmdRm(args);
+                        break;
+                    case 'cp':
+                        cmdCp(args);
+                        break;
+                    case 'mv':
+                        cmdMv(args);
+                        break;
+                    case 'ip':
+                        cmdIp(args);
+                        break;
+                    case 'dhclient':
+                        cmdDhclient(args);
+                        break;
+                    case 'apt':
+                        cmdApt(args);
+                        break;
+                    case 'vi':
+                    case 'vim':
+                        cmdVim(args);
+                        break;
+                    case 'reboot':
+                        cmdReboot();
+                        break;
+                    case 'poweroff':
+                        cmdPoweroff();
+                        break;
+                    case 'su':
+                        cmdSu(args);
+                        break;
+                    case 'hostname':
+                        cmdHostname(args);
+                        break;
+                    default:
+                        addOutput(`bash: ${command}: comando não encontrado`, 'error');
+                        break;
+                }
+                
+                isExecuting = false;
+                
+                // Não renderizar prompt para alguns comandos
+                if (command !== 'clear' && command !== 'reboot' && command !== 'poweroff' && command !== 'vim' && command !== 'vi') {
+                    renderPrompt();
+                }
+            }, Math.random() * 200); // Pequeno atraso aleatório para parecer mais realista
+        }
+
+        // Implementação de comandos
+        function cmdLs(args) {
+            let path = ttys[currentState.currentTTY].currentDir;
+            let showHidden = false;
+            let longFormat = false;
+            
+            // Processar opções
+            for (let i = 0; i < args.length; i++) {
+                if (args[i].startsWith('-')) {
+                    if (args[i].includes('a')) showHidden = true;
+                    if (args[i].includes('l')) longFormat = true;
+                } else {
+                    path = resolvePath(args[i]);
+                }
+            }
+            
+            // Obter o diretório alvo
+            const targetDir = getDirectoryContents(path);
+            
+            if (!targetDir) {
+                addOutput(`ls: não foi possível acessar '${path}': Arquivo ou diretório não encontrado`, 'error');
+                return;
+            }
+            
+            if (targetDir.type !== 'd') {
+                addOutput(`ls: não foi possível acessar '${path}': Não é um diretório`, 'error');
+                return;
+            }
+            
+            // Listar conteúdo
+            const entries = Object.keys(targetDir.content);
+            
+            if (entries.length === 0) {
+                // Diretório vazio
+                return;
+            }
+            
+            // Filtrar arquivos ocultos se necessário
+            const filteredEntries = showHidden ? entries : entries.filter(entry => !entry.startsWith('.'));
+            
+            if (longFormat) {
+                // Formato longo (ls -l)
+                filteredEntries.forEach(entry => {
+                    const item = targetDir.content[entry];
+                    
+                    // Formato: tipo, permissões, links, proprietário, grupo, tamanho, data, nome
+                    let size = item.type === 'd' ? 4096 : (item.content ? item.content.length : 0);
+                    addOutput(`${item.permissions} 1 ${item.owner} ${item.group} ${size.toString().padStart(8)} ${item.date} ${entry}${item.type === 'd' ? '/' : ''}`);
                 });
-              } else if (fileSystem[target]) {
-                if (long) {
-                  fileSystem[target].forEach(name => {
-                    const full = target === '/' ? '/' + name : target + '/' + name;
-                    const isDir = fileSystem[full] !== undefined;
-                    const type = isDir ? 'd' : '-';
-                    const size = isDir ? '4.0K' : '1.0K';
-                    const desc = isDir && dirDesc[name] ? '  # ' + dirDesc[name] : '';
-                    println(type + (isDir ? 'rwxr-xr-x' : '-rw-r--r--') + ' 1 root root ' + (human ? size : '1024') + ' Jan  1 00:00 ' + name + desc);
-                  });
+            } else {
+                // Formato simples
+                addOutput(filteredEntries.map(entry => {
+                    const item = targetDir.content[entry];
+                    return `${entry}${item.type === 'd' ? '/' : ''}`;
+                }).join('  '));
+            }
+        }
+
+        function cmdCd(args) {
+            if (args.length === 0) {
+                // cd sem argumentos vai para o diretório do usuário
+                ttys[currentState.currentTTY].currentDir = currentState.currentUser === 'root' ? '/root' : `/home/${currentState.currentUser}`;
+                return;
+            }
+            
+            const targetPath = resolvePath(args[0]);
+            const targetDir = getDirectoryContents(targetPath);
+            
+            if (!targetDir) {
+                addOutput(`cd: ${args[0]}: Arquivo ou diretório não encontrado`, 'error');
+                return;
+            }
+            
+            if (targetDir.type !== 'd') {
+                addOutput(`cd: ${args[0]}: Não é um diretório`, 'error');
+                return;
+            }
+            
+            ttys[currentState.currentTTY].currentDir = targetPath;
+        }
+
+        function cmdPwd() {
+            addOutput(ttys[currentState.currentTTY].currentDir);
+        }
+
+        function cmdCat(args) {
+            if (args.length === 0) {
+                addOutput('cat: nenhum arquivo especificado', 'error');
+                return;
+            }
+            
+            const targetPath = resolvePath(args[0]);
+            const targetFile = getDirectoryContents(targetPath);
+            
+            if (!targetFile) {
+                addOutput(`cat: ${args[0]}: Arquivo ou diretório não encontrado`, 'error');
+                return;
+            }
+            
+            if (targetFile.type === 'd') {
+                addOutput(`cat: ${args[0]}: É um diretório`, 'error');
+                return;
+            }
+            
+            // Exibir conteúdo do arquivo
+            addOutput(targetFile.content);
+        }
+
+        function cmdWhoami() {
+            addOutput(currentState.currentUser);
+        }
+
+        function cmdTty() {
+            addOutput(`/dev/tty${currentState.currentTTY}`);
+        }
+
+        function cmdEcho(args) {
+            // Processar simples substituições de variáveis
+            const processedArgs = args.map(arg => {
+                if (arg.startsWith('$')) {
+                    const varName = arg.substring(1);
+                    switch (varName) {
+                        case 'USER':
+                            return currentState.currentUser;
+                        case 'HOME':
+                            return currentState.currentUser === 'root' ? '/root' : `/home/${currentState.currentUser}`;
+                        case 'HOSTNAME':
+                            return currentState.hostname;
+                        case 'PWD':
+                            return ttys[currentState.currentTTY].currentDir;
+                        default:
+                            return '';
+                    }
+                }
+                return arg;
+            });
+            
+            // Verificar se é um redirecionamento
+            const output = processedArgs.join(' ');
+            const redirectIndex = args.indexOf('>');
+            
+            if (redirectIndex !== -1 && redirectIndex < args.length - 1) {
+                // Redirecionamento
+                const filePath = resolvePath(args[redirectIndex + 1]);
+                const parentDir = getParentDirectory(filePath);
+                const fileName = filePath.split('/').pop();
+                
+                if (!parentDir) {
+                    addOutput(`echo: não foi possível redirecionar: diretório não encontrado`, 'error');
+                    return;
+                }
+                
+                // Criar ou sobrescrever arquivo
+                parentDir.content[fileName] = {
+                    type: '-',
+                    permissions: '-rw-r--r--',
+                    owner: currentState.currentUser,
+                    group: currentState.currentUser,
+                    content: processedArgs.slice(0, redirectIndex).join(' '),
+                    date: getCurrentDate()
+                };
+            } else {
+                // Exibição normal
+                addOutput(output);
+            }
+        }
+
+        function cmdClear() {
+            ttys[currentState.currentTTY].output = [];
+            renderTerminal();
+        }
+
+        function cmdMkdir(args) {
+            if (args.length === 0) {
+                addOutput('mkdir: operando em falta', 'error');
+                addOutput('Tente \'mkdir --help\' para mais informações.', 'error');
+                return;
+            }
+            
+            const targetPath = resolvePath(args[0]);
+            const parentDir = getParentDirectory(targetPath);
+            const dirName = targetPath.split('/').pop();
+            
+            if (!parentDir) {
+                addOutput(`mkdir: não foi possível criar o diretório '${args[0]}': Caminho não encontrado`, 'error');
+                return;
+            }
+            
+            if (parentDir.content[dirName]) {
+                addOutput(`mkdir: não foi possível criar o diretório '${args[0]}': Arquivo existe`, 'error');
+                return;
+            }
+            
+            // Criar diretório
+            parentDir.content[dirName] = {
+                type: 'd',
+                permissions: 'drwxr-xr-x',
+                owner: currentState.currentUser,
+                group: currentState.currentUser,
+                content: {},
+                date: getCurrentDate()
+            };
+        }
+
+        function cmdRm(args) {
+            if (args.length === 0) {
+                addOutput('rm: operando em falta', 'error');
+                addOutput('Tente \'rm --help\' para mais informações.', 'error');
+                return;
+            }
+            
+            let recursive = false;
+            let force = false;
+            let targetPaths = [];
+            
+            // Processar opções
+            for (let i = 0; i < args.length; i++) {
+                if (args[i].startsWith('-')) {
+                    if (args[i].includes('r') || args[i].includes('R')) recursive = true;
+                    if (args[i].includes('f')) force = true;
                 } else {
-                  println(fileSystem[target].join('  '));
+                    targetPaths.push(args[i]);
                 }
-              } else {
-                println(`bash: ls: cannot access '${args[1]}': No such file or directory`);
-              }
             }
-            break;
-
-          case 'cd': {
-              const target = args[1] ? resolvePath(args[1]) : '/home/root';
-              if (fileSystem[target]) {
-                currentPath = target;
-              } else {
-                println(`bash: cd: ${args[1]}: No such file or directory`);
-              }
+            
+            if (targetPaths.length === 0) {
+                addOutput('rm: operando em falta', 'error');
+                return;
             }
-            break;
-
-          case 'cat': {
-              if (!args[1]) {
-                println('bash: cat: missing operand');
-              } else {
-                const target = resolvePath(args[1]);
-                if (fileContents[target] !== undefined) {
-                  print(fileContents[target]);
-                } else if (fileSystem[target] !== undefined) {
-                  println(`bash: cat: ${args[1]}: Is a directory`);
-                } else {
-                  println(`bash: cat: ${args[1]}: No such file or directory`);
+            
+            // Processar cada caminho
+            targetPaths.forEach(path => {
+                const targetPath = resolvePath(path);
+                const parentDir = getParentDirectory(targetPath);
+                const fileName = targetPath.split('/').pop();
+                
+                if (!parentDir || !parentDir.content[fileName]) {
+                    if (!force) {
+                        addOutput(`rm: não foi possível remover '${path}': Arquivo ou diretório não encontrado`, 'error');
+                    }
+                    return;
                 }
-              }
-            }
-            break;
-
-          case 'touch': {
-              if (!args[1]) {
-                println('bash: touch: missing file operand');
-              } else {
-                const full = resolvePath(args[1]);
-                if (!fileSystem[full] && fileContents[full] === undefined) {
-                  fileContents[full] = '';
-                  ensureParentDir(full);
+                
+                const target = parentDir.content[fileName];
+                
+                if (target.type === 'd' && !recursive) {
+                    addOutput(`rm: não foi possível remover '${path}': É um diretório`, 'error');
+                    return;
                 }
-              }
-            }
-            break;
+                
+                // Remover arquivo ou diretório
+                delete parentDir.content[fileName];
+            });
+        }
 
-          case 'mkdir': {
-              if (!args[1]) {
-                println('bash: mkdir: missing operand');
-              } else {
-                const full = resolvePath(args[1]);
-                if (fileSystem[full] || fileContents[full] !== undefined) {
-                  println(`bash: mkdir: cannot create directory '${args[1]}': File exists`);
-                } else {
-                  fileSystem[full] = [];
-                  ensureParentDir(full);
-                }
-              }
+        function cmdCp(args) {
+            if (args.length < 2) {
+                addOutput('cp: faltando operando de arquivo', 'error');
+                addOutput('Tente \'cp --help\' para mais informações.', 'error');
+                return;
             }
-            break;
-
-          case 'rmdir': {
-              if (!args[1]) {
-                println('bash: rmdir: missing operand');
-              } else {
-                const full = resolvePath(args[1]);
-                if (!fileSystem[full]) {
-                  println(`bash: rmdir: failed to remove '${args[1]}': No such file or directory`);
-                } else if (fileSystem[full].length > 0) {
-                  println(`bash: rmdir: failed to remove '${args[1]}': Directory not empty`);
-                } else {
-                  delete fileSystem[full];
-                  const parent = full.slice(0, full.lastIndexOf('/')) || '/';
-                  const name = full.slice(full.lastIndexOf('/') + 1);
-                  const idx = fileSystem[parent].indexOf(name);
-                  if (idx !== -1) fileSystem[parent].splice(idx, 1);
-                }
-              }
+            
+            const sourcePath = resolvePath(args[0]);
+            const destPath = resolvePath(args[1]);
+            
+            const sourceFile = getDirectoryContents(sourcePath);
+            
+            if (!sourceFile) {
+                addOutput(`cp: não foi possível acessar '${args[0]}': Arquivo ou diretório não encontrado`, 'error');
+                return;
             }
-            break;
+            
+            const destParent = getParentDirectory(destPath);
+            const destName = destPath.split('/').pop();
+            
+            if (!destParent) {
+                addOutput(`cp: não foi possível criar arquivo regular '${args[1]}': Caminho não encontrado`, 'error');
+                return;
+            }
+            
+            // Cópia simples (sem recursão para diretórios)
+            if (sourceFile.type === 'd') {
+                addOutput(`cp: omitindo o diretório '${args[0]}'`, 'error');
+                return;
+            }
+            
+            // Criar uma cópia
+            destParent.content[destName] = {
+                ...sourceFile,
+                owner: currentState.currentUser,
+                group: currentState.currentUser,
+                date: getCurrentDate()
+            };
+        }
 
-          case 'rm': {
-              if (args.length < 2) {
-                println('bash: rm: missing operand');
-              } else if (args[1] === '-r' && args[2]) {
-                const full = resolvePath(args[2]);
-                function removeRecursive(p) {
-                  if (fileSystem[p]) {
-                    fileSystem[p].forEach(child => {
-                      const childPath = p === '/' ? '/' + child : p + '/' + child;
-                      removeRecursive(childPath);
+        function cmdMv(args) {
+            if (args.length < 2) {
+                addOutput('mv: faltando operando de arquivo', 'error');
+                addOutput('Tente \'mv --help\' para mais informações.', 'error');
+                return;
+            }
+            
+            const sourcePath = resolvePath(args[0]);
+            const destPath = resolvePath(args[1]);
+            
+            const sourceParent = getParentDirectory(sourcePath);
+            const sourceName = sourcePath.split('/').pop();
+            
+            if (!sourceParent || !sourceParent.content[sourceName]) {
+                addOutput(`mv: não foi possível acessar '${args[0]}': Arquivo ou diretório não encontrado`, 'error');
+                return;
+            }
+            
+            const destParent = getParentDirectory(destPath);
+            const destName = destPath.split('/').pop();
+            
+            if (!destParent) {
+                addOutput(`mv: não foi possível mover para '${args[1]}': Caminho não encontrado`, 'error');
+                return;
+            }
+            
+            // Mover o arquivo/diretório
+            destParent.content[destName] = sourceParent.content[sourceName];
+            delete sourceParent.content[sourceName];
+        }
+
+        function cmdIp(args) {
+            if (args.length === 0) {
+                addOutput('Uso: ip [opções] OBJETO {COMANDO | help}', 'error');
+                addOutput('OBJETO := { link | address | route | neigh }', 'error');
+                return;
+            }
+            
+            if (args[0] === 'address' || args[0] === 'addr' || args[0] === 'a') {
+                if (args[1] === 'show' || args[1] === 's' || !args[1]) {
+                    // Mostrar endereços IP
+                    const showAll = !args[2];
+                    const interfaces = Object.keys(currentState.networkInterfaces);
+                    
+                    interfaces.forEach(iface => {
+                        if (showAll || args[2] === iface) {
+                            const ifaceData = currentState.networkInterfaces[iface];
+                            
+                            if (iface === 'lo') {
+                                addOutput(`1: ${iface}: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000`);
+                                addOutput(`    inet ${ifaceData.address}/8 scope host lo`);
+                                addOutput(`       valid_lft forever preferred_lft forever`);
+                            } else {
+                                addOutput(`2: ${iface}: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state ${ifaceData.status.toUpperCase()} group default qlen 1000`);
+                                if (ifaceData.address) {
+                                    addOutput(`    inet ${ifaceData.address}/24 brd 10.0.2.255 scope global dynamic ${iface}`);
+                                    addOutput(`       valid_lft 86386sec preferred_lft 86386sec`);
+                                }
+                                addOutput(`    link/ether 08:00:27:a9:7d:${iface === 'enp0s3' ? '95' : 'ab'} brd ff:ff:ff:ff:ff:ff`);
+                            }
+                        }
                     });
-                    delete fileSystem[p];
-                    const parent = p.slice(0, p.lastIndexOf('/')) || '/';
-                    const name = p.slice(p.lastIndexOf('/') + 1);
-                    const idx = fileSystem[parent].indexOf(name);
-                    if (idx !== -1) fileSystem[parent].splice(idx, 1);
-                  }
-                  if (fileContents[p] !== undefined) {
-                    delete fileContents[p];
-                    const parent = p.slice(0, p.lastIndexOf('/')) || '/';
-                    const name = p.slice(p.lastIndexOf('/') + 1);
-                    const idx = fileSystem[parent].indexOf(name);
-                    if (idx !== -1) fileSystem[parent].splice(idx, 1);
-                  }
                 }
-                removeRecursive(full);
-              } else {
-                const full = resolvePath(args[1]);
-                if (fileContents[full] !== undefined) {
-                  delete fileContents[full];
-                  const parent = full.slice(0, full.lastIndexOf('/')) || '/';
-                  const name = full.slice(full.lastIndexOf('/') + 1);
-                  const idx = fileSystem[parent].indexOf(name);
-                  if (idx !== -1) fileSystem[parent].splice(idx, 1);
-                } else if (fileSystem[full]) {
-                  println(`bash: rm: cannot remove '${args[1]}': Is a directory`);
+            } else {
+                addOutput(`Objeto ${args[0]} não reconhecido.`, 'error');
+            }
+        }
+
+        function cmdDhclient(args) {
+            if (args.length === 0) {
+                addOutput('Uso: dhclient [opções] interface', 'error');
+                return;
+            }
+            
+            const iface = args[args.length - 1];
+            const verbose = args.includes('-v');
+            
+            if (!currentState.networkInterfaces[iface]) {
+                addOutput(`Interface ${iface} não encontrada.`, 'error');
+                return;
+            }
+            
+            // Simular processo DHCP
+            loadingElement.style.display = 'flex';
+            
+            setTimeout(() => {
+                if (verbose) {
+                    addOutput('Internet Systems Consortium DHCP Client 4.4.1');
+                    addOutput('Copyright 2004-2018 Internet Systems Consortium.');
+                    addOutput('All rights reserved.');
+                    addOutput('For info, please visit https://www.isc.org/software/dhcp/');
+                    addOutput('');
+                    addOutput(`Listening on LPF/${iface}/08:00:27:a9:7d:ab`);
+                    addOutput('Sending on   LPF/${iface}/08:00:27:a9:7d:ab');
+                    addOutput(`Sending on   Socket/fallback`);
+                    addOutput(`DHCPDISCOVER on ${iface} to 255.255.255.255 port 67 interval 3`);
+                    addOutput(`DHCPREQUEST for 10.0.2.15 on ${iface} to 255.255.255.255 port 67`);
+                    addOutput(`DHCPACK from 10.0.2.2`);
+                    addOutput(`bound to 10.0.2.15 -- renewal in 42196 seconds.`);
+                }
+                
+                // Atualizar configuração de rede
+                currentState.networkInterfaces[iface] = {
+                    status: 'up',
+                    address: iface === 'enp0s3' ? '10.0.2.15' : '192.168.56.101',
+                    netmask: '255.255.255.0'
+                };
+                
+                loadingElement.style.display = 'none';
+                renderPrompt();
+            }, 3000);
+        }
+
+        function cmdApt(args) {
+            if (args.length === 0) {
+                addOutput('apt 2.6.1 (amd64)', 'success');
+                addOutput('Uso: apt [opções] comando', 'success');
+                return;
+            }
+            
+            const command = args[0];
+            
+            if (command === 'update') {
+                // Simular apt update
+                loadingElement.style.display = 'flex';
+                
+                let progress = 0;
+                const updateInterval = setInterval(() => {
+                    if (progress < 100) {
+                        progress += 10;
+                        loadingElement.innerHTML = `<div>Atualizando... ${progress}%</div>`;
+                    } else {
+                        clearInterval(updateInterval);
+                        loadingElement.style.display = 'none';
+                        
+                        addOutput('Obter:1 http://deb.debian.org/debian bookworm InRelease [151 kB]');
+                        addOutput('Obter:2 http://deb.debian.org/debian bookworm/main amd64 Packages [9.262 kB]');
+                        addOutput('Obter:3 http://security.debian.org/debian-security bookworm-security InRelease [48,0 kB]');
+                        addOutput('Baixados 9.461 kB em 2s (4.731 kB/s)');
+                        addOutput('Lendo listas de pacotes... Pronto');
+                        
+                        currentState.aptUpdated = true;
+                        renderPrompt();
+                    }
+                }, 300);
+            } else if (command === 'install') {
+                if (args.length < 2) {
+                    addOutput('E: Nenhum pacote foi especificado para instalação.', 'error');
+                    return;
+                }
+                
+                const packageName = args[1];
+                
+                if (!currentState.aptUpdated) {
+                    addOutput('E: As listas de pacotes ou os arquivos de status não puderam ser analisados ou abertos.', 'error');
+                    addOutput('Tente executar "apt update" primeiro.', 'error');
+                    return;
+                }
+                
+                if (!availablePackages[packageName]) {
+                    addOutput(`E: Não foi possível encontrar o pacote ${packageName}`, 'error');
+                    return;
+                }
+                
+                if (currentState.installedPackages[packageName]) {
+                    addOutput(`${packageName} já é a versão mais recente (${availablePackages[packageName].version}).`, 'success');
+                    return;
+                }
+                
+                // Simular instalação
+                loadingElement.style.display = 'flex';
+                
+                setTimeout(() => {
+                    addOutput(`Lendo listas de pacotes... Pronto`);
+                    addOutput(`Construindo árvore de dependências... Pronto`);
+                    addOutput(`Lendo informação de estado... Pronto`);
+                    addOutput(`Os pacotes adicionais seguintes serão instalados:`);
+                    
+                    const dependencies = availablePackages[packageName].dependencies;
+                    if (dependencies.length > 0) {
+                        addOutput(`  ${dependencies.join(' ')}`);
+                    }
+                    
+                    addOutput(`Os NOVOS pacotes seguintes serão instalados:`);
+                    addOutput(`  ${packageName}${dependencies.length > 0 ? ' ' + dependencies.join(' ') : ''}`);
+                    addOutput(`0 pacotes atualizados, ${1 + dependencies.length} pacotes novos instalados, 0 a serem removidos e 0 não atualizados.`);
+                    addOutput(`Necessário obter ${availablePackages[packageName].size} de arquivos.`);
+                    addOutput(`Depois desta operação, ${(parseFloat(availablePackages[packageName].size) * 2.5).toFixed(1)}MB adicionais de espaço em disco serão usados.`);
+                    addOutput(`Obter:1 http://deb.debian.org/debian bookworm/main amd64 ${packageName} amd64 ${availablePackages[packageName].version} [${availablePackages[packageName].size}]`);
+                    
+                    let progress = 0;
+                    const installInterval = setInterval(() => {
+                        if (progress < 100) {
+                            progress += 5;
+                            loadingElement.innerHTML = `<div>Instalando ${packageName}... ${progress}%</div>`;
+                        } else {
+                            clearInterval(installInterval);
+                            loadingElement.style.display = 'none';
+                            
+                            addOutput(`Baixados ${availablePackages[packageName].size} em 1s (${availablePackages[packageName].size}/s)`);
+                            addOutput(`Selecionando pacote ${packageName} previamente não selecionado.`);
+                            addOutput(`Preparando para desempacotar .../packages/${packageName}_${availablePackages[packageName].version}_amd64.deb...`);
+                            addOutput(`Desempacotando ${packageName} (${availablePackages[packageName].version})...`);
+                            addOutput(`Configurando ${packageName} (${availablePackages[packageName].version})...`);
+                            addOutput(`Processando gatilhos para man-db (2.11.2-2)...`);
+                            
+                            // Marcar como instalado
+                            currentState.installedPackages[packageName] = {
+                                version: availablePackages[packageName].version,
+                                installDate: getCurrentDate()
+                            };
+                            
+                            // Marcar dependências como instaladas também
+                            dependencies.forEach(dep => {
+                                if (!currentState.installedPackages[dep]) {
+                                    currentState.installedPackages[dep] = {
+                                        version: availablePackages[dep].version,
+                                        installDate: getCurrentDate()
+                                    };
+                                }
+                            });
+                            
+                            renderPrompt();
+                        }
+                    }, 200);
+                }, 1000);
+            } else if (command === 'list' || command === 'list --installed') {
+                if (Object.keys(currentState.installedPackages).length === 0) {
+                    addOutput('Nenhum pacote instalado.');
+                    return;
+                }
+                
+                // Listar pacotes instalados
+                addOutput('Lista de pacotes instalados:');
+                Object.keys(currentState.installedPackages).forEach(pkg => {
+                    const info = currentState.installedPackages[pkg];
+                    addOutput(`${pkg}/${currentState.hostname} ${info.version} amd64 [instalado,local]`);
+                });
+            } else {
+                addOutput(`Comando apt '${command}' não reconhecido.`, 'error');
+            }
+        }
+
+        function cmdVim(args) {
+            if (args.length === 0) {
+                addOutput('uso: vim [argumentos] [arquivo ..]', 'error');
+                return;
+            }
+            
+            const filePath = resolvePath(args[0]);
+            const parentDir = getParentDirectory(filePath);
+            const fileName = filePath.split('/').pop();
+            
+            if (!parentDir) {
+                addOutput(`vim: não foi possível editar '${args[0]}': Diretório não encontrado`, 'error');
+                return;
+            }
+            
+            // Verificar se vim está instalado
+            if (!currentState.installedPackages['vim']) {
+                addOutput(`bash: vim: comando não encontrado`, 'error');
+                return;
+            }
+            
+            // Limpar a tela para o editor
+            ttys[currentState.currentTTY].output = [];
+            
+            // Interface simulada do Vim
+            const fileContent = parentDir.content[fileName] ? parentDir.content[fileName].content : '';
+            
+            // Criar "editor" simulado
+            activeEditor = {
+                filePath: filePath,
+                parentDir: parentDir,
+                fileName: fileName,
+                content: fileContent,
+                saved: true
+            };
+            
+            // Mostrar conteúdo no "editor"
+            renderEditor();
+        }
+
+        function renderEditor() {
+            terminal.innerHTML = '';
+            
+            // Mostrar conteúdo do arquivo
+            const lines = activeEditor.content.split('\n');
+            const headerLine = document.createElement('div');
+            headerLine.className = 'terminal-line';
+            headerLine.innerHTML = `"${activeEditor.fileName}" ${lines.length}L, ${activeEditor.content.length}C`;
+            terminal.appendChild(headerLine);
+            
+            // Adicionar linhas com números
+            lines.forEach((line, index) => {
+                const lineElement = document.createElement('div');
+                lineElement.className = 'terminal-line';
+                lineElement.innerHTML = `${index + 1} ${line}`;
+                terminal.appendChild(lineElement);
+            });
+            
+            // Linha de status
+            const statusLine = document.createElement('div');
+            statusLine.className = 'terminal-line';
+            statusLine.innerHTML = `<span style="background-color: #333; color: white; width: 100%; display: block; padding: 2px 5px;">"${activeEditor.fileName}" ${lines.length}L, ${activeEditor.content.length}C${activeEditor.saved ? '' : ' [+]'}</span>`;
+            terminal.appendChild(statusLine);
+            
+            // Linha de comando
+            const cmdLine = document.createElement('div');
+            cmdLine.className = 'terminal-line';
+            cmdLine.innerHTML = `<span>:</span><span class="blinking-cursor"></span>`;
+            terminal.appendChild(cmdLine);
+            
+            // Instruções
+            const instructionsLine = document.createElement('div');
+            instructionsLine.className = 'terminal-line';
+            instructionsLine.innerHTML = `<span style="color: #888;">[Pressione ESC, digite :wq e pressione ENTER para salvar e sair]</span>`;
+            terminal.appendChild(instructionsLine);
+        }
+
+        function handleEditorInput(event) {
+            if (event.key === 'Escape') {
+                // Entrar no modo de comando
+                const cmdLine = terminal.querySelector('.terminal-line:nth-last-child(2)');
+                cmdLine.innerHTML = `<span>:</span><span class="blinking-cursor"></span>`;
+                currentInput = '';
+                inputPosition = 0;
+            } else if (event.key === 'Enter' && currentInput === ':wq') {
+                // Salvar e sair
+                saveEditorContent();
+                activeEditor = null;
+                ttys[currentState.currentTTY].output = [];
+                renderTerminal();
+            } else if (event.key === 'Enter' && currentInput === ':q!') {
+                // Sair sem salvar
+                activeEditor = null;
+                ttys[currentState.currentTTY].output = [];
+                renderTerminal();
+            } else if (currentInput.startsWith(':') && event.key.length === 1) {
+                // Adicionar à linha de comando
+                currentInput += event.key;
+                const cmdLine = terminal.querySelector('.terminal-line:nth-last-child(2)');
+                cmdLine.innerHTML = `<span>:${currentInput.substring(1)}</span><span class="blinking-cursor"></span>`;
+            }
+        }
+
+        function saveEditorContent() {
+            const parentDir = activeEditor.parentDir;
+            const fileName = activeEditor.fileName;
+            
+            // Atualizar ou criar arquivo
+            if (parentDir.content[fileName]) {
+                parentDir.content[fileName].content = activeEditor.content;
+                parentDir.content[fileName].date = getCurrentDate();
+            } else {
+                parentDir.content[fileName] = {
+                    type: '-',
+                    permissions: '-rw-r--r--',
+                    owner: currentState.currentUser,
+                    group: currentState.currentUser,
+                    content: activeEditor.content,
+                    date: getCurrentDate()
+                };
+            }
+        }
+
+        function cmdReboot() {
+            addOutput('Reiniciando sistema...');
+            
+            loadingElement.style.display = 'flex';
+            loadingElement.innerHTML = '<div class="spinner"></div><div style="margin-left: 10px;">Reiniciando...</div>';
+            
+            setTimeout(() => {
+                ttys[currentState.currentTTY].output = [];
+                loadingElement.style.display = 'none';
+                bootSystem();
+                
+                // Atualizar tempo de inicialização
+                currentState.bootTime = new Date().getTime();
+            }, 3000);
+        }
+
+        function cmdPoweroff() {
+            addOutput('Desligando sistema...');
+            
+            loadingElement.style.display = 'flex';
+            loadingElement.innerHTML = '<div class="spinner"></div><div style="margin-left: 10px;">Desligando...</div>';
+            
+            setTimeout(() => {
+                ttys[currentState.currentTTY].output = [];
+                
+                // Tela preta com mensagem
+                terminal.innerHTML = '';
+                loadingElement.style.display = 'none';
+                
+                const shutdownMsg = document.createElement('div');
+                shutdownMsg.className = 'terminal-line';
+                shutdownMsg.innerHTML = '<span>Sistema desligado. Clique em qualquer lugar para reiniciar.</span>';
+                terminal.appendChild(shutdownMsg);
+                
+                // Quando clicar, reiniciar
+                terminal.onclick = function() {
+                    terminal.onclick = null;
+                    bootSystem();
+                    
+                    // Atualizar tempo de inicialização
+                    currentState.bootTime = new Date().getTime();
+                };
+            }, 3000);
+        }
+
+        function cmdSu(args) {
+            const targetUser = args.length > 0 ? args[0] : 'root';
+            
+            if (!currentState.users[targetUser]) {
+                addOutput(`su: usuário ${targetUser} não existe`, 'error');
+                return;
+            }
+            
+            // Trocar usuário
+            currentState.currentUser = targetUser;
+            
+            // Se trocar para root, não precisa de senha
+            // Em implementação real, pediriamos senha
+            
+            addOutput(``, 'success');
+        }
+
+        function cmdHostname(args) {
+            if (args.length === 0) {
+                // Exibir o hostname atual
+                addOutput(currentState.hostname);
+                return;
+            }
+            
+            // Definir novo hostname
+            if (currentState.currentUser !== 'root') {
+                addOutput('hostname: você deve ser root para alterar o hostname do sistema', 'error');
+                return;
+            }
+            
+            currentState.hostname = args[0];
+            
+            // Atualizar o hostname no arquivo
+            const hostnameFile = getDirectoryContents('/etc/hostname');
+            if (hostnameFile) {
+                hostnameFile.content = currentState.hostname;
+            }
+        }
+
+        // Funções utilitárias
+        function resolvePath(path) {
+            // Caminho absoluto ou relativo
+            let currentDir = ttys[currentState.currentTTY].currentDir;
+            
+            if (path.startsWith('/')) {
+                return normalizePath(path);
+            } else {
+                return normalizePath(`${currentDir}/${path}`);
+            }
+        }
+
+        function normalizePath(path) {
+            // Normalizar caminho (remover .., ., barras extras)
+            const parts = path.split('/').filter(p => p !== '');
+            const result = [];
+            
+            for (let i = 0; i < parts.length; i++) {
+                if (parts[i] === '..') {
+                    result.pop();
+                } else if (parts[i] !== '.') {
+                    result.push(parts[i]);
+                }
+            }
+            
+            return '/' + result.join('/');
+        }
+
+        function getDirectoryContents(path) {
+            if (path === '/') {
+                return filesystem['/'];
+            }
+            
+            const parts = path.split('/').filter(p => p !== '');
+            let current = filesystem['/'];
+            
+            for (let i = 0; i < parts.length; i++) {
+                if (!current || current.type !== 'd' || !current.content[parts[i]]) {
+                    return null;
+                }
+                current = current.content[parts[i]];
+            }
+            
+            return current;
+        }
+
+        function getParentDirectory(path) {
+            const parts = path.split('/').filter(p => p !== '');
+            
+            if (parts.length === 0) {
+                return null;
+            }
+            
+            // Remover o último elemento (nome do arquivo/diretório)
+            parts.pop();
+            
+            // Se não houver partes, é o diretório raiz
+            if (parts.length === 0) {
+                return filesystem['/'];
+            }
+            
+            return getDirectoryContents('/' + parts.join('/'));
+        }
+
+        function getCurrentDate() {
+            const now = new Date();
+            const month = now.toLocaleString('default', { month: 'short' });
+            const day = now.getDate().toString().padStart(2, '0');
+            const time = now.toTimeString().substring(0, 5);
+            return `${month} ${day} ${time}`;
+        }
+
+        // Funções para TTYs
+        function switchTTY(ttyNum) {
+            if (ttyNum < 1 || ttyNum > 6) return;
+            
+            currentState.currentTTY = ttyNum;
+            
+            // Atualizar botões
+            ttyButtons.forEach(btn => {
+                if (parseInt(btn.dataset.tty) === ttyNum) {
+                    btn.classList.add('active');
                 } else {
-                  println(`bash: rm: cannot remove '${args[1]}': No such file or directory`);
+                    btn.classList.remove('active');
                 }
-              }
-            }
-            break;
-
-          case 'echo': {
-              if (args.includes('>')) {
-                const idx = args.indexOf('>');
-                const text = args.slice(1, idx).join(' ');
-                const filename = args[idx + 1];
-                const full = resolvePath(filename);
-                fileContents[full] = text + '\n';
-                ensureParentDir(full);
-              } else {
-                println(args.slice(1).join(' '));
-              }
-            }
-            break;
-
-          case 'chmod':
-            if (args.length < 3) println('chmod: missing operand');
-            break;
-
-          case 'chown':
-            if (args.length < 3) println('chown: missing operand');
-            break;
-
-          case 'id':
-            println('uid=0(root) gid=0(root) groups=0(root)');
-            break;
-
-          case 'uname':
-            if (args[1] === '-a') println('Linux debian 5.10.0-8-amd64 #1 SMP Debian 5.10.46-4 (2021-08-03) x86_64 GNU/Linux');
-            else println('Linux');
-            break;
-
-          case 'hostname':
-            println('debian');
-            break;
-
-          case 'uptime':
-            println(' 07:34:25 up 1 day,  1:23,  1 user,  load average: 0.00, 0.01, 0.05');
-            break;
-
-          case 'who':
-            println('root     pts/1        Jun 01 00:00');
-            break;
-
-          case 'users':
-            println('root');
-            break;
-
-          case 'history':
-            historyList.forEach((item, idx) => println(`  ${idx + 1}  ${item}`));
-            break;
-
-          case 'lsblk':
-            println('NAME   MAJ:MIN RM   SIZE RO TYPE MOUNTPOINT');
-            println('sda      8:0    0    30G  0 disk');
-            println('└─sda1   8:1    0    30G  0 part /');
-            println('sr0     11:0    1   1024M  0 rom ');
-            break;
-
-          case 'mount':
-            println('/dev/sda1 on / type ext4 (rw,relatime,errors=remount-ro)');
-            println('tmpfs on /run type tmpfs (rw,nosuid,noexec,relatime,size=1024000k)');
-            break;
-
-          case 'df':
-            if (args[1] === '-h') {
-              println('Filesystem      Size  Used Avail Use% Mounted on');
-              println('/dev/sda1        29G  1.2G   27G   5% /');
-              println('tmpfs           1.0G     0  1.0G   0% /run');
-            } else {
-              println('Filesystem     1K-blocks    Used Available Use% Mounted on');
-              println('/dev/sda1       30429504 1024000  27405504   4% /');
-              println('tmpfs            1024000       0   1024000   0% /run');
-            }
-            break;
-
-          case 'free':
-            if (args[1] === '-h') {
-              println('              total        used        free      shared  buff/cache   available');
-              println('Mem:           1.9G        512M       1.0G        12M        345M       1.2G');
-              println('Swap:          1.0G          0B       1.0G');
-            } else {
-              println('              total        used        free      shared  buff/cache   available');
-              println('Mem:         1997312     524288    1048576      12288     353824    1254400');
-              println('Swap:        1048576          0    1048576');
-            }
-            break;
-
-          case 'date':
-            println('Sun Jun  1 00:00:00 UTC 2025');
-            break;
-
-          case 'cal':
-            println('     June 2025');
-            println('Su Mo Tu We Th Fr Sa');
-            println(' 1  2  3  4  5  6  7');
-            println(' 8  9 10 11 12 13 14');
-            println('15 16 17 18 19 20 21');
-            println('22 23 24 25 26 27 28');
-            println('29 30');
-            break;
-
-          case 'ip':
-            if (args[1] === 'address' && args[2] === 'show') {
-              println('1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN qlen 1000');
-              println('    inet 127.0.0.1/8 scope host lo');
-              println('');
-              println('2: enp0s3: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP qlen 1000');
-              println('    inet 10.0.2.15/24 brd 10.0.2.255 scope global enp0s3');
-              println('    link/ether 08:00:27:53:8b:1c');
-              println('');
-              println('3: enp0s8: <BROADCAST,MULTICAST> mtu 1500 qdisc noop state DOWN qlen 1000');
-              println('    link/ether 08:00:27:2d:4e:6a');
-            } else if (args[1] === 'a' && args[2] === 's' && args[3] === 'enp0s8') {
-              println('3: enp0s8: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP qlen 1000');
-              println('    inet 10.3.46.113/24 brd 10.3.46.255 scope global enp0s8');
-              println('    link/ether 08:00:27:2d:4e:6a');
-            } else {
-              println(`bash: ip: comando não encontrado ou parâmetros incorretos`);
-            }
-            break;
-
-          case 'ifconfig':
-            println('enp0s3: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500');
-            println('    inet 10.0.2.15  netmask 255.255.255.0  broadcast 10.0.2.255');
-            println('    inet6 fe80::a00:27ff:fe53:8b1c  prefixlen 64  scopeid 0x20<link>');
-            println('    ether 08:00:27:53:8b:1c  txqueuelen 1000  (Ethernet)');
-            println('    RX packets 12345  bytes 9876543 (9.8 MB)');
-            println('    RX errors 0  dropped 0  overruns 0  frame 0');
-            println('    TX packets 12345  bytes 9876543 (9.8 MB)');
-            println('    TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0');
-            println('');
-            println('lo: flags=73<UP,LOOPBACK,RUNNING>  mtu 65536');
-            println('    inet 127.0.0.1  netmask 255.0.0.0');
-            println('    inet6 ::1  prefixlen 128  scopeid 0x10<host>');
-            println('    loop  txqueuelen 1000  (Local Loopback)');
-            println('    RX packets 1234  bytes 123456 (123.4 KB)');
-            println('    RX errors 0  dropped 0  overruns 0  frame 0');
-            println('    TX packets 1234  bytes 123456 (123.4 KB)');
-            println('    TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0');
-            break;
-
-          case 'route':
-            println('Kernel IP routing table');
-            println('Destination     Gateway         Genmask         Flags Metric Ref Use Iface');
-            println('default         10.0.2.2        0.0.0.0         UG    1024   0   0 enp0s3');
-            println('10.0.2.0        *               255.255.255.0   U     0      0   0 enp0s3');
-            break;
-
-          case 'ping':
-            if (!args[1]) println('Usage: ping <host>');
-            else {
-              println(`PING ${args[1]} (8.8.8.8) 56(84) bytes of data.`);
-              println(`64 bytes from 8.8.8.8: icmp_seq=1 ttl=117 time=10.1 ms`);
-              println(`64 bytes from 8.8.8.8: icmp_seq=2 ttl=117 time=10.0 ms`);
-              println(`--- ${args[1]} ping statistics ---`);
-              println(`2 packets transmitted, 2 received, 0% packet loss, time 1001ms`);
-            }
-            break;
-
-          case 'traceroute':
-            if (!args[1]) println('Usage: traceroute <host>');
-            else {
-              println(`traceroute to ${args[1]} (8.8.8.8), 30 hops max, 60 byte packets`);
-              println(` 1  10.0.2.2  0.123 ms  0.090 ms  0.076 ms`);
-              println(` 2  192.168.1.1  1.234 ms  1.102 ms  1.001 ms`);
-              println(` 3  72.14.204.112  12.345 ms  11.234 ms  11.001 ms`);
-            }
-            break;
-
-          case 'dhclient':
-            if (args[1] === '-v' && args[2] === 'enp0s8') {
-              println('DHCPDISCOVER on enp0s8 to 255.255.255.255 port 67 interval 3');
-              println('DHCPREQUEST on enp0s8 to 255.255.255.255 port 67');
-              println('DHCPOFFER from 10.0.2.2');
-              println('DHCPACK from 10.0.2.2');
-              println('bound to 10.3.46.113 -- renewal in 3591 seconds.');
-            } else println('bash: dhclient: comando não encontrado ou parâmetros incorretos');
-            break;
-
-          case 'apt':
-          case 'apt-get':
-            if (args[1] === 'update') {
-              println('Hit:1 http://ftp.debian.org/debian bookworm InRelease');
-              println('Reading package lists... Done');
-            } else if (args[1] === 'install' && args[2]) {
-              const pkg = args[2];
-              if (!installedPackages.has(pkg)) {
-                simulateInstall(pkg);
-              } else {
-                println(`${pkg} já está instalado.`);
-              }
-            } else if (args[1] === 'upgrade') {
-              println('Reading package lists... Done');
-              println('Building dependency tree... Done');
-              println('Reading state information... Done');
-              println('0 upgraded, 0 newly installed, 0 to remove and 0 not upgraded.');
-            } else println(`bash: ${command}: comando não encontrado ou parâmetros incorretos`);
-            break;
-
-          case 'dpkg':
-            if (args[1] === '-l') {
-              println('Desired=Unknown/Install/Remove/Purge/Hold');
-              println('| Status=Not/Inst/Conf-files/Unpacked/halF-conf/Half-inst/trig-aWait/Trig-pend');
-              println('|/ Err?=(none)/Reinst-required (Status,Err: uppercase=bad)');
-              println('||/ Name           Version        Architecture Description');
-              println('+++-==============-==============-============-=================================');
-              println('ii  vim            2:8.2.2434-3   amd64        Vi IMproved - enhanced vi editor');
-              println('ii  nano           5.9-1          amd64        small, friendly text editor inspiration of Pico');
-            } else println(`bash: dpkg: comando não encontrado ou parâmetros incorretos`);
-            break;
-
-          case 'vim':
-          case 'vi':
-            if (!args[1]) println('vim: no file specified');
-            else if (installedPackages.has('vim')) openEditor(args[1]);
-            else println('bash: vim: command not found');
-            break;
-
-          case 'nano':
-            if (!args[1]) println('nano: no file specified');
-            else if (installedPackages.has('nano')) openEditor(args[1]);
-            else println('bash: nano: command not found');
-            break;
-
-          case 'service':
-            if (args.length < 2) println('Usage: service <name> <action>');
-            else println(`${args[1]}: unrecognized service`);
-            break;
-
-          case 'systemctl':
-            if (args[1] === 'status' && args[2]) println(`Unit ${args[2]}.service could not be found.`);
-            else println(`bash: systemctl: comando não encontrado ou parâmetros incorretos`);
-            break;
-
-          case 'useradd':
-          case 'adduser':
-            if (!args[1]) println('Usage: useradd <username>');
-            else println(`Usuário '${args[1]}' criado.`);
-            break;
-
-          case 'passwd':
-            if (!args[1]) println('Usage: passwd <username>');
-            else {
-              println(`Alterando senha para '${args[1]}':`);
-              println('(senha alterada)');
-            }
-            break;
-
-          case 'wget':
-            if (!args[1]) println('Usage: wget <url>');
-            else {
-              println(`--2025-06-01 00:00:00--  ${args[1]}`);
-              println(`Resolving ${args[1]}... 93.184.216.34`);
-              println(`Connecting to ${args[1]}|93.184.216.34|:80... connected.`);
-              println('HTTP request sent, awaiting response... 200 OK');
-              println('Length: 10234 (10K) [text/html]');
-              println(`Saving to: '${args[1].split('/').pop()}'`);
-              println('10K downloaded, 10.0 KB/s');
-            }
-            break;
-
-          case 'curl':
-            if (!args[1]) println('Usage: curl <url>');
-            else println(`<html>Response from ${args[1]}</html>`);
-            break;
-
-          case 'tar':
-            println('tar: option requires an argument -- f');
-            break;
-
-          case 'gzip':
-            println('Usage: gzip [-dfkhLnNtvV19] [-S suffix] [file...]');
-            break;
-
-          case 'unzip':
-            println('Archive:  archive.zip');
-            println('  inflating: file1.txt');
-            println('  inflating: file2.txt');
-            break;
-
-          case 'git':
-            if (args[1] === 'clone' && args[2]) {
-              println(`Cloning into '${args[2].split('/').pop().replace('.git','')}'...`);
-              println('remote: Enumerating objects: 10, done.');
-              println('remote: Counting objects: 100% (10/10), done.');
-              println('remote: Compressing objects: 100% (5/5), done.');
-              println('Receiving objects: 100% (10/10), 2.34 KiB | 2.34 MiB/s, done.');
-            } else println('git: command not found');
-            break;
-
-          case 'top':
-            println('top - 00:00:00 up 1 day,  1:23,  1 user,  load average: 0.00, 0.01, 0.05');
-            println('Tasks:   2 total,   0 running,   2 sleeping,   0 stopped,   0 zombie');
-            println('%Cpu(s):  0.3 us,  0.1 sy,  0.0 ni, 99.5 id,  0.0 wa,  0.0 hi,  0.1 si,  0.0 st');
-            println('KiB Mem :   2048000 total,    512000 free,    102400 used,   1433600 buff/cache');
-            println('KiB Swap:   1024000 total,   1024000 free,         0 used.   1830400 avail Mem');
-            println('  PID USER      PR  NI    VIRT    RES    SHR S  %CPU %MEM     TIME+ COMMAND');
-            println(' 1234 root      20   0   123456   1234    800 S   0.0  0.1   0:00.01 bash');
-            break;
-
-          case 'ps':
-            println('  PID TTY          TIME CMD');
-            println(' 1234 pts/1    00:00:00 bash');
-            println(' 1235 pts/1    00:00:00 ps');
-            break;
-
-          case 'df':
-            if (args[1] === '-h') {
-              println('Filesystem      Size  Used Avail Use% Mounted on');
-              println('/dev/sda1        29G  1.2G   27G   5% /');
-              println('tmpfs           1.0G     0  1.0G   0% /run');
-            } else {
-              println('Filesystem     1K-blocks    Used Available Use% Mounted on');
-              println('/dev/sda1       30429504 1024000  27405504   4% /');
-              println('tmpfs            1024000       0   1024000   0% /run');
-            }
-            break;
-
-          case 'du':
-            const targetPath = args[1] ? resolvePath(args[1]) : '.';
-            println(`4\t${targetPath}`);
-            break;
-
-          case 'su':
-            if (args[1] === '-') {
-              if (args[2]) println(`Mudando para usuário ${args[2]}.`);
-              else println('Mudando para usuário root.');
-            } else println('su: opção inválida ou usuário não especificado.');
-            break;
-
-          case 'reboot':
-            println('Rebooting...');
-            setTimeout(() => { location.reload(); }, 1000);
-            break;
-
-          case 'poweroff':
-            println('Powering off...');
-            poweredOff = true;
-            break;
-
-          default:
-            println(`bash: ${command}: command not found`);
-        }
-      }
-
-      document.addEventListener('keydown', function(e) {
-        if (isInEditor) {
-          if (e.ctrlKey && (e.key === 's' || e.key === 'S')) {
-            e.preventDefault();
-            saveEditor();
-          } else if (e.ctrlKey && (e.key === 'q' || e.key === 'Q')) {
-            e.preventDefault();
-            exitEditor();
-            setTimeout(newPrompt, 100);
-          }
-          return;
-        }
-        if (poweredOff) return;
-
-        if (e.altKey && /^F[1-6]$/.test(e.key)) {
-          const num = parseInt(e.key.substring(1));
-          currentTTY = num;
-          term.innerHTML = '';
-          println('Switching to /dev/tty' + currentTTY);
-          if (loginState === 'login_username') {
-            print('debian login: ');
-            createInput();
-            isPasswordPrompt = false;
-          } else if (loginState === 'login_password') {
-            print('Password: ');
-            createInput();
-            isPasswordPrompt = true;
-          } else if (loginState === 'shell') {
-            newPrompt();
-          }
-          e.preventDefault();
-          return;
+            });
+            
+            renderTerminal();
         }
 
-        if (!inputSpan) return;
-
-        if (e.key === 'Backspace') {
-          e.preventDefault();
-          if (currentLine.length > 0) {
-            currentLine = currentLine.slice(0, -1);
-            inputSpan.textContent = inputSpan.textContent.slice(0, -1);
-          }
-        } else if (e.key === 'Enter') {
-          e.preventDefault();
-          removeInput();
-          const cmd = currentLine;
-          currentLine = '';
-          println('');
-          if (loginState.startsWith('login')) {
-            if (loginState === 'login_username') {
-              tempUsername = cmd.trim();
-              if (tempUsername === 'root') {
-                loginState = 'login_password';
-                print('Password: ');
-                createInput();
-                isPasswordPrompt = true;
-              } else {
-                println('Login incorreto');
-                print('debian login: ');
-                createInput();
-                isPasswordPrompt = false;
-              }
-            } else if (loginState === 'login_password') {
-              if (tempUsername === 'root' && cmd === 'fiap') {
-                currentUser = 'root';
-                loginState = 'shell';
-                println('');
-                newPrompt();
-              } else {
-                println('Login incorreto');
-                loginState = 'login_username';
-                print('debian login: ');
-                createInput();
-                isPasswordPrompt = false;
-              }
+        // Funções para salvar/carregar estado
+        function saveState(name = null) {
+            const savedName = name || `Sessão ${new Date().toLocaleString()}`;
+            
+            const stateToSave = {
+                ttys: ttys,
+                currentState: currentState,
+                filesystem: filesystem,
+                installedPackages: currentState.installedPackages,
+                timestamp: new Date().getTime(),
+                name: savedName
+            };
+            
+            // Salvar no localStorage
+            try {
+                // Obter histórico existente
+                let history = JSON.parse(localStorage.getItem('debianTerminalHistory') || '[]');
+                
+                // Adicionar nova sessão
+                history.push({
+                    name: savedName,
+                    date: new Date().toLocaleString(),
+                    timestamp: new Date().getTime(),
+                    state: JSON.stringify(stateToSave)
+                });
+                
+                // Limitar tamanho do histórico
+                if (history.length > 10) {
+                    history = history.slice(-10);
+                }
+                
+                localStorage.setItem('debianTerminalHistory', JSON.stringify(history));
+                
+                if (autoSave) {
+                    localStorage.setItem('debianTerminalState', JSON.stringify(stateToSave));
+                }
+                
+                addOutput(`Sessão salva: ${savedName}`, 'success');
+            } catch (e) {
+                addOutput(`Erro ao salvar sessão: ${e.message}`, 'error');
             }
-          } else if (loginState === 'shell') {
-            if (cmd.trim()) historyList.push(cmd.trim());
-            processCommand(cmd);
-            if (!poweredOff && !isInEditor && !skipNextPrompt) {
-              setTimeout(newPrompt, 100);
-            } else if (skipNextPrompt) {
-              skipNextPrompt = false;
-            }
-          }
-        } else if (e.key.length === 1) {
-          e.preventDefault();
-          currentLine += e.key;
-          inputSpan.textContent += isPasswordPrompt ? '*' : e.key;
-        } else if (e.key === 'l' && e.ctrlKey) {
-          e.preventDefault();
-          term.innerHTML = '';
-          if (loginState === 'shell') {
-            newPrompt();
-          }
         }
-      });
 
-      showLoginPrompt();
-    })();
-  </script>
+        function loadStateFromHistory(historyItem) {
+            try {
+                const state = JSON.parse(historyItem.state);
+                restoreState(state);
+                historyModal.style.display = 'none';
+                addOutput(`Sessão carregada: ${historyItem.name}`, 'success');
+            } catch (e) {
+                addOutput(`Erro ao carregar sessão: ${e.message}`, 'error');
+            }
+        }
+
+        function restoreState(state) {
+            // Restaurar estado
+            ttys = state.ttys;
+            currentState = state.currentState;
+            filesystem = state.filesystem;
+            
+            renderTerminal();
+        }
+
+        function resetTerminal() {
+            // Limpar todos os TTYs
+            Object.keys(ttys).forEach(key => {
+                ttys[key] = { history: [], currentDir: '/root', user: 'root', hostname: 'debian', output: [] };
+            });
+            
+            // Redefinir estado
+            currentState = {
+                currentTTY: 1,
+                networkInterfaces: {
+                    lo: {
+                        status: 'up',
+                        address: '127.0.0.1',
+                        netmask: '255.0.0.0'
+                    },
+                    enp0s3: {
+                        status: 'up',
+                        address: '10.0.2.15',
+                        netmask: '255.255.255.0'
+                    },
+                    enp0s8: {
+                        status: 'down',
+                        address: '',
+                        netmask: ''
+                    }
+                },
+                runningProcesses: [],
+                installedPackages: {},
+                users: {
+                    'root': {
+                        password: 'x',
+                        uid: 0,
+                        gid: 0,
+                        home: '/root',
+                        shell: '/bin/bash'
+                    },
+                    'user': {
+                        password: 'x',
+                        uid: 1000,
+                        gid: 1000,
+                        home: '/home/user',
+                        shell: '/bin/bash'
+                    }
+                },
+                currentUser: 'root',
+                hostname: 'debian',
+                uptime: 0,
+                bootTime: new Date().getTime(),
+                kernel: {
+                    version: '5.10.0-21-amd64',
+                    status: 'running'
+                },
+                grub: {
+                    status: 'healthy',
+                    config: 'default'
+                },
+                aptUpdated: false
+            };
+            
+            // Reinicializar sistema de arquivos
+            filesystem = {
+                '/': {
+                    type: 'd',
+                    permissions: 'drwxr-xr-x',
+                    owner: 'root',
+                    group: 'root',
+                    content: {},
+                    date: '2025-05-15 08:00'
+                }
+            };
+            
+            initializeFilesystem();
+            
+            // Reiniciar terminal
+            bootSystem();
+        }
+
+        function showHistoryModal() {
+            historyList.innerHTML = '';
+            
+            try {
+                const history = JSON.parse(localStorage.getItem('debianTerminalHistory') || '[]');
+                
+                if (history.length === 0) {
+                    historyList.innerHTML = '<div class="no-history">Nenhuma sessão salva encontrada.</div>';
+                } else {
+                    // Ordenar por data (mais recente primeiro)
+                    history.sort((a, b) => b.timestamp - a.timestamp);
+                    
+                    history.forEach((item, index) => {
+                        const historyItem = document.createElement('div');
+                        historyItem.className = 'history-item';
+                        
+                        historyItem.innerHTML = `
+                            <div class="history-name">${item.name}</div>
+                            <div class="history-date">${item.date}</div>
+                            <button class="delete-history" data-index="${index}">&times;</button>
+                        `;
+                        
+                        historyItem.onclick = function(e) {
+                            if (e.target.classList.contains('delete-history')) {
+                                deleteHistoryItem(parseInt(e.target.dataset.index));
+                            } else {
+                                loadStateFromHistory(item);
+                            }
+                        };
+                        
+                        historyList.appendChild(historyItem);
+                    });
+                }
+                
+                historyModal.style.display = 'flex';
+            } catch (e) {
+                addOutput(`Erro ao carregar histórico: ${e.message}`, 'error');
+            }
+        }
+
+        function deleteHistoryItem(index) {
+            try {
+                const history = JSON.parse(localStorage.getItem('debianTerminalHistory') || '[]');
+                history.splice(index, 1);
+                localStorage.setItem('debianTerminalHistory', JSON.stringify(history));
+                
+                // Atualizar modal
+                showHistoryModal();
+            } catch (e) {
+                addOutput(`Erro ao excluir item do histórico: ${e.message}`, 'error');
+            }
+        }
+
+        // Event listeners
+        document.addEventListener('keydown', function(e) {
+            if (activeEditor) {
+                handleEditorInput(e);
+            } else {
+                handleInput(e);
+            }
+        });
+
+        ttyButtons.forEach(btn => {
+            btn.addEventListener('click', function() {
+                switchTTY(parseInt(this.dataset.tty));
+            });
+        });
+
+        autoSaveToggle.addEventListener('change', function() {
+            autoSave = this.checked;
+            localStorage.setItem('debianTerminalAutoSave', autoSave);
+            
+            if (autoSave) {
+                saveState();
+            }
+        });
+
+        saveBtn.addEventListener('click', function() {
+            const name = prompt('Nome da sessão:', `Sessão ${new Date().toLocaleString()}`);
+            if (name) {
+                saveState(name);
+            }
+        });
+
+        loadBtn.addEventListener('click', function() {
+            showHistoryModal();
+        });
+
+        resetBtn.addEventListener('click', function() {
+            if (confirm('Tem certeza que deseja resetar o terminal? Todas as alterações não salvas serão perdidas.')) {
+                resetTerminal();
+            }
+        });
+
+        closeModal.addEventListener('click', function() {
+            historyModal.style.display = 'none';
+        });
+
+        window.addEventListener('click', function(e) {
+            if (e.target === historyModal) {
+                historyModal.style.display = 'none';
+            }
+        });
+
+        // Atalhos de teclado para ALT+F1 a ALT+F6
+        document.addEventListener('keydown', function(e) {
+            if (e.altKey && e.key.startsWith('F')) {
+                const ttyNum = parseInt(e.key.substring(1));
+                if (ttyNum >= 1 && ttyNum <= 6) {
+                    switchTTY(ttyNum);
+                }
+            }
+        });
+    </script>
 </body>
 </html>
