@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Terminal Debian MKalil</title>
+    <title>Terminal Debian </title>
     <link rel="icon" href="favicon.ico" type="image/x-icon">
     <style>
         :root {
@@ -677,6 +677,63 @@
             color: var(--accent-color);
         }
 
+        .mobile-keyboard {
+            display: none;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: #111;
+            padding: 5px;
+            box-sizing: border-box;
+            z-index: 90;
+            border-top: 1px solid #333;
+        }
+
+        @media (max-width: 768px) {
+            .mobile-keyboard {
+                display: block;
+            }
+            
+            .terminal-window {
+                height: calc(var(--terminal-height) - 50px);
+            }
+            
+            .footer {
+                bottom: 60px;
+            }
+        }
+
+        .mobile-keyboard-row {
+            display: flex;
+            justify-content: center;
+            margin: 2px 0;
+        }
+
+        .mobile-key {
+            background: #222;
+            color: var(--terminal-text);
+            border: 1px solid #444;
+            border-radius: 4px;
+            padding: 6px;
+            margin: 2px;
+            min-width: 30px;
+            text-align: center;
+            cursor: pointer;
+            user-select: none;
+            font-family: monospace;
+        }
+
+        .mobile-key:active {
+            background: #333;
+            color: var(--accent-color);
+        }
+
+        .mobile-key.special {
+            background: #333;
+            min-width: 50px;
+        }
+
         @keyframes boot {
             0% {
                 opacity: 0;
@@ -978,6 +1035,27 @@
         </div>
     </div>
 
+    <div class="mobile-keyboard" id="mobile-keyboard">
+        <div class="mobile-keyboard-row">
+            <div class="mobile-key">Esc</div>
+            <div class="mobile-key">Tab</div>
+            <div class="mobile-key">Ctrl</div>
+            <div class="mobile-key">Alt</div>
+            <div class="mobile-key special">Space</div>
+            <div class="mobile-key">|</div>
+            <div class="mobile-key">/</div>
+            <div class="mobile-key">-</div>
+        </div>
+        <div class="mobile-keyboard-row">
+            <div class="mobile-key">↑</div>
+            <div class="mobile-key">↓</div>
+            <div class="mobile-key">←</div>
+            <div class="mobile-key">→</div>
+            <div class="mobile-key special">Backspace</div>
+            <div class="mobile-key special">Enter</div>
+        </div>
+    </div>
+
     <div class="modal" id="historyModal">
         <div class="modal-content">
             <div class="modal-header">
@@ -996,7 +1074,7 @@
     </div>
 
     <div class="footer">
-        &copy; 2025 MKalil - Terminal Debian
+        &copy; 2025 MKalil - Terminal Debian 
     </div>
 
     <script>
@@ -1186,6 +1264,7 @@
         const contextMenu = document.getElementById('context-menu');
         const contextCopy = document.getElementById('context-copy');
         const contextPaste = document.getElementById('context-paste');
+        const mobileKeyboard = document.getElementById('mobile-keyboard');
         
         const installBackBtn = document.getElementById('install-back');
         const installNextBtn = document.getElementById('install-next');
@@ -1218,6 +1297,8 @@
 
         let clipboard = '';
         let selectedText = '';
+        let ctrlKeyPressed = false;
+        let altKeyPressed = false;
 
         const installSteps = [
             'install-step-language',
@@ -1256,7 +1337,21 @@
                 startSystem();
             }
             
-            document.addEventListener('keydown', handleKeyDown);
+            // Setup mobile keyboard
+            setupMobileKeyboard();
+            
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Control') ctrlKeyPressed = true;
+                if (e.key === 'Alt') altKeyPressed = true;
+                
+                handleKeyDown(e);
+            });
+            
+            document.addEventListener('keyup', function(e) {
+                if (e.key === 'Control') ctrlKeyPressed = false;
+                if (e.key === 'Alt') altKeyPressed = false;
+            });
+            
             document.addEventListener('click', function(e) {
                 if (contextMenu.style.display === 'block') {
                     contextMenu.style.display = 'none';
@@ -1398,6 +1493,69 @@
             editorContent.addEventListener('click', updateEditorPosition);
             editorContent.addEventListener('keyup', updateEditorPosition);
         };
+
+        function setupMobileKeyboard() {
+            const mobileKeys = document.querySelectorAll('.mobile-key');
+            
+            mobileKeys.forEach(key => {
+                key.addEventListener('click', function() {
+                    const keyText = this.textContent;
+                    
+                    switch(keyText) {
+                        case 'Esc':
+                            // Simular Escape
+                            document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+                            break;
+                        case 'Tab':
+                            // Simular Tab
+                            document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab' }));
+                            break;
+                        case 'Ctrl':
+                            // Toggle Ctrl
+                            ctrlKeyPressed = !ctrlKeyPressed;
+                            this.style.backgroundColor = ctrlKeyPressed ? '#444' : '#222';
+                            break;
+                        case 'Alt':
+                            // Toggle Alt
+                            altKeyPressed = !altKeyPressed;
+                            this.style.backgroundColor = altKeyPressed ? '#444' : '#222';
+                            break;
+                        case 'Space':
+                            // Inserir espaço
+                            insertText(' ');
+                            break;
+                        case 'Backspace':
+                            // Simular Backspace
+                            document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Backspace' }));
+                            break;
+                        case 'Enter':
+                            // Simular Enter
+                            document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+                            break;
+                        case '↑':
+                            // Simular seta para cima
+                            document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp' }));
+                            break;
+                        case '↓':
+                            // Simular seta para baixo
+                            document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown' }));
+                            break;
+                        case '←':
+                            // Simular seta para esquerda
+                            document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft' }));
+                            break;
+                        case '→':
+                            // Simular seta para direita
+                            document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
+                            break;
+                        default:
+                            // Inserir o texto da tecla
+                            insertText(keyText);
+                            break;
+                    }
+                });
+            });
+        }
 
         function startSystem() {
             initializeFilesystem();
@@ -1625,6 +1783,28 @@
                 owner: 'root',
                 group: 'root',
                 content: {},
+                date: '2025-06-01'
+            };
+            
+            filesystem['/']['etc']['sudoers'] = {
+                type: '-',
+                permissions: '-r--r-----',
+                owner: 'root',
+                group: 'root',
+                content: 
+`# /etc/sudoers
+#
+# Este arquivo DEVE ser editado com o comando 'visudo'.
+#
+Defaults	env_reset
+Defaults	mail_badpass
+Defaults	secure_path="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+
+# Usuário root pode executar qualquer coisa em qualquer lugar
+root	ALL=(ALL:ALL) ALL
+
+# Permitir membros do grupo sudo a executar qualquer comando
+%sudo	ALL=(ALL:ALL) ALL`,
                 date: '2025-06-01'
             };
         }
@@ -1893,6 +2073,11 @@
             currentState.hostname = installData.hostname;
             currentState.users['root'].password = installData.rootPassword;
             
+            // Garantir que o grupo sudo existe
+            if (!currentState.groups['sudo']) {
+                currentState.groups['sudo'] = { gid: 27, members: [] };
+            }
+            
             if (installData.username) {
                 currentState.users[installData.username] = {
                     password: installData.userPassword,
@@ -1949,6 +2134,37 @@
                 };
             }
             
+            // Garantir que o sudo esteja instalado
+            currentState.installedPackages['sudo'] = {
+                version: '1.9.13',
+                installDate: getCurrentDate()
+            };
+            
+            // Configurar o arquivo sudoers
+            if (!filesystem['/']['etc']['sudoers']) {
+                filesystem['/']['etc']['sudoers'] = {
+                    type: '-',
+                    permissions: '-r--r-----',
+                    owner: 'root',
+                    group: 'root',
+                    content: 
+`# /etc/sudoers
+#
+# Este arquivo DEVE ser editado com o comando 'visudo'.
+#
+Defaults	env_reset
+Defaults	mail_badpass
+Defaults	secure_path="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+
+# Usuário root pode executar qualquer coisa em qualquer lugar
+root	ALL=(ALL:ALL) ALL
+
+# Permitir membros do grupo sudo a executar qualquer comando
+%sudo	ALL=(ALL:ALL) ALL`,
+                    date: getCurrentDate()
+                };
+            }
+            
             setTimeout(() => {
                 installScreen.style.display = 'none';
                 bootSystem();
@@ -1973,10 +2189,16 @@
         }
 
         function renderPrompt() {
-            const promptLine = document.createElement('div');
-            promptLine.className = 'terminal-line';
+            // Remover qualquer prompt existente antes de adicionar um novo
+            const existingPrompt = terminal.querySelector('.current-prompt');
+            if (existingPrompt) {
+                existingPrompt.remove();
+            }
             
-            const currentTTY = ttys[currentState.currentTTY];
+            // Criar nova linha para o prompt
+            const promptLine = document.createElement('div');
+            promptLine.className = 'terminal-line current-prompt';
+            
             const promptText = `${currentState.currentUser}@${currentState.hostname}:${getCurrentDirDisplay()}${currentState.currentUser === 'root' ? '#' : '$'} `;
             
             promptLine.innerHTML = `<span class="prompt">${promptText}</span>`;
@@ -2051,6 +2273,7 @@
                     executeCommand(command);
                 } else {
                     addOutput('');
+                    renderPrompt();
                 }
                 
                 currentInput = '';
@@ -2253,8 +2476,6 @@
                     }
                 }
             }
-            
-            // Tratar pipes (futuro)
             
             setTimeout(() => {
                 let output = '';
@@ -2482,7 +2703,7 @@
                 }
                 
                 // Tratar redirecionamento de saída
-                if (outputRedirect) {
+                if (outputRedirect && output !== null) {
                     const redirectPath = resolvePath(outputRedirect);
                     const parentDir = getParentDirectory(redirectPath);
                     const fileName = redirectPath.split('/').pop();
@@ -2503,7 +2724,7 @@
                     } else {
                         errorOutput = `${command}: não foi possível redirecionar: diretório não encontrado`;
                     }
-                } else {
+                } else if (output !== null) {
                     // Mostrar saída normal
                     if (output) {
                         output.split('\n').forEach(line => {
