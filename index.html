@@ -3,8 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <meta name="google-site-verification" content="OaUR8xcb529Q2eLcvauPvYVvAgk6sy1w-8sWXNyN_2o" />
     <title>Terminal Debian </title>
     <link rel="icon" href="favicon.ico" type="image/x-icon">
     <style>
@@ -15,6 +13,7 @@
             --terminal-prompt: #50fa7b;
             --terminal-success: #50fa7b;
             --terminal-error: #ff5555;
+            --terminal-warning: #f1fa8c;
             --glow-color: rgba(80, 250, 123, 0.3);
             --terminal-width: 90vw;
             --terminal-height: 80vh;
@@ -164,6 +163,10 @@
 
         .error {
             color: var(--terminal-error);
+        }
+
+        .warning {
+            color: var(--terminal-warning);
         }
 
         .scan-line {
@@ -630,6 +633,29 @@
             color: var(--terminal-text);
             font-size: 14px;
             border-bottom: 1px solid #333;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .editor-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .editor-button {
+            background: #222;
+            border: none;
+            color: var(--terminal-text);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        .editor-button:hover {
+            background: #333;
+            color: var(--accent-color);
         }
 
         .editor-content {
@@ -677,6 +703,260 @@
         .context-menu-item:hover {
             background: #333;
             color: var(--accent-color);
+        }
+
+        .file-browser {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--terminal-bg);
+            z-index: 75;
+            display: none;
+            flex-direction: column;
+        }
+
+        .file-browser-header {
+            background: #111;
+            padding: 10px;
+            color: var(--terminal-text);
+            border-bottom: 1px solid #333;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .file-browser-path {
+            font-size: 14px;
+            font-weight: bold;
+            flex-grow: 1;
+            margin-right: 10px;
+            padding: 5px;
+            background: #222;
+            border-radius: 3px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .file-browser-buttons {
+            display: flex;
+            gap: 5px;
+        }
+
+        .file-browser-button {
+            background: #222;
+            border: none;
+            color: var(--terminal-text);
+            padding: 5px 10px;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+
+        .file-browser-button:hover {
+            background: #333;
+            color: var(--accent-color);
+        }
+
+        .file-browser-content {
+            flex: 1;
+            overflow: auto;
+            padding: 10px;
+        }
+
+        .file-item {
+            display: flex;
+            padding: 5px;
+            border-radius: 3px;
+            margin-bottom: 3px;
+            cursor: pointer;
+            align-items: center;
+        }
+
+        .file-item:hover {
+            background: #111;
+        }
+
+        .file-item.selected {
+            background: #222;
+            color: var(--accent-color);
+        }
+
+        .file-icon {
+            margin-right: 8px;
+            width: 16px;
+            text-align: center;
+        }
+
+        .file-name {
+            flex-grow: 1;
+        }
+
+        .file-info {
+            font-size: 12px;
+            color: #888;
+            text-align: right;
+            margin-left: 10px;
+        }
+
+        .file-permissions {
+            font-size: 12px;
+            color: #888;
+            font-family: monospace;
+            margin-left: 10px;
+        }
+
+        .error-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #220000;
+            z-index: 80;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            box-sizing: border-box;
+            text-align: center;
+        }
+
+        .error-icon {
+            font-size: 48px;
+            color: var(--terminal-error);
+            margin-bottom: 20px;
+        }
+
+        .error-title {
+            font-size: 24px;
+            color: var(--terminal-error);
+            margin-bottom: 10px;
+        }
+
+        .error-message {
+            font-size: 16px;
+            color: var(--terminal-text);
+            margin-bottom: 20px;
+            max-width: 80%;
+            line-height: 1.5;
+        }
+
+        .error-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .error-button {
+            background: #330000;
+            border: 1px solid var(--terminal-error);
+            color: var(--terminal-text);
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .error-button:hover {
+            background: #550000;
+        }
+
+        .export-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            display: none;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .export-content {
+            background-color: #0a0b0c;
+            padding: 20px;
+            border-radius: 6px;
+            width: 80%;
+            max-width: 600px;
+            border: 1px solid #444;
+            box-shadow: 0 0 20px var(--glow-color);
+        }
+
+        .export-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #333;
+            padding-bottom: 10px;
+        }
+
+        .export-title {
+            color: var(--terminal-text);
+            font-size: 18px;
+        }
+
+        .export-close {
+            color: var(--terminal-text);
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+        }
+
+        .export-data {
+            background: #111;
+            border: 1px solid #333;
+            color: var(--terminal-text);
+            padding: 10px;
+            width: 100%;
+            height: 200px;
+            box-sizing: border-box;
+            font-family: monospace;
+            font-size: 12px;
+            resize: none;
+            margin-bottom: 15px;
+        }
+
+        .export-actions {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .export-button {
+            background: #111;
+            color: var(--terminal-text);
+            border: 1px solid #444;
+            border-radius: 4px;
+            padding: 8px 15px;
+            cursor: pointer;
+        }
+
+        .export-button:hover {
+            background: #222;
+            color: var(--accent-color);
+            border-color: var(--accent-color);
+        }
+
+        .import-area {
+            margin-top: 15px;
+        }
+
+        .import-text {
+            background: #111;
+            border: 1px solid #333;
+            color: var(--terminal-text);
+            padding: 10px;
+            width: 100%;
+            height: 200px;
+            box-sizing: border-box;
+            font-family: monospace;
+            font-size: 12px;
+            resize: none;
+            margin-bottom: 15px;
         }
 
         @keyframes boot {
@@ -782,6 +1062,13 @@
                             <div class="install-option selected"><span class="install-option-radio">●</span> Português (Brasil)</div>
                             <div class="install-option"><span class="install-option-radio">○</span> English</div>
                             <div class="install-option"><span class="install-option-radio">○</span> Español</div>
+                            <div class="install-option"><span class="install-option-radio">○</span> Français</div>
+                            <div class="install-option"><span class="install-option-radio">○</span> Deutsch</div>
+                            <div class="install-option"><span class="install-option-radio">○</span> Italiano</div>
+                            <div class="install-option"><span class="install-option-radio">○</span> Nederlands</div>
+                            <div class="install-option"><span class="install-option-radio">○</span> Русский</div>
+                            <div class="install-option"><span class="install-option-radio">○</span> 中文 (简体)</div>
+                            <div class="install-option"><span class="install-option-radio">○</span> 日本語</div>
                         </div>
                     </div>
                     
@@ -789,8 +1076,13 @@
                         <div class="install-step-title">Selecione sua localização</div>
                         <div class="install-options">
                             <div class="install-option selected"><span class="install-option-radio">●</span> Brasil</div>
+                            <div class="install-option"><span class="install-option-radio">○</span> Argentina</div>
+                            <div class="install-option"><span class="install-option-radio">○</span> Chile</div>
+                            <div class="install-option"><span class="install-option-radio">○</span> Colômbia</div>
                             <div class="install-option"><span class="install-option-radio">○</span> Estados Unidos</div>
+                            <div class="install-option"><span class="install-option-radio">○</span> México</div>
                             <div class="install-option"><span class="install-option-radio">○</span> Portugal</div>
+                            <div class="install-option"><span class="install-option-radio">○</span> Uruguai</div>
                         </div>
                     </div>
                     
@@ -798,8 +1090,44 @@
                         <div class="install-step-title">Configure o teclado</div>
                         <div class="install-options">
                             <div class="install-option selected"><span class="install-option-radio">●</span> Português (Brasil)</div>
+                            <div class="install-option"><span class="install-option-radio">○</span> Português (Brasil, variante ABNT2)</div>
                             <div class="install-option"><span class="install-option-radio">○</span> Inglês (US)</div>
+                            <div class="install-option"><span class="install-option-radio">○</span> Inglês (US Internacional)</div>
+                            <div class="install-option"><span class="install-option-radio">○</span> Espanhol (Latino-Americano)</div>
                             <div class="install-option"><span class="install-option-radio">○</span> Português (Portugal)</div>
+                            <div class="install-option"><span class="install-option-radio">○</span> Francês</div>
+                            <div class="install-option"><span class="install-option-radio">○</span> Alemão</div>
+                        </div>
+                    </div>
+                    
+                    <div class="install-step" id="install-step-network" style="display: none;">
+                        <div class="install-step-title">Configure a rede</div>
+                        <div class="install-options">
+                            <div class="install-option">
+                                <label>Configuração de rede:</label>
+                                <select id="install-network-type" class="install-input">
+                                    <option value="dhcp" selected>DHCP (configuração automática)</option>
+                                    <option value="static">Estático (configuração manual)</option>
+                                </select>
+                            </div>
+                            <div id="static-network-options" style="display: none; margin-top: 15px;">
+                                <div class="login-row">
+                                    <span class="login-label">Endereço IP:</span>
+                                    <input type="text" id="install-network-ip" class="install-input" value="192.168.1.100">
+                                </div>
+                                <div class="login-row">
+                                    <span class="login-label">Máscara:</span>
+                                    <input type="text" id="install-network-mask" class="install-input" value="255.255.255.0">
+                                </div>
+                                <div class="login-row">
+                                    <span class="login-label">Gateway:</span>
+                                    <input type="text" id="install-network-gateway" class="install-input" value="192.168.1.1">
+                                </div>
+                                <div class="login-row">
+                                    <span class="login-label">DNS:</span>
+                                    <input type="text" id="install-network-dns" class="install-input" value="8.8.8.8, 1.1.1.1">
+                                </div>
+                            </div>
                         </div>
                     </div>
                     
@@ -817,6 +1145,22 @@
                         </div>
                     </div>
                     
+                    <div class="install-step" id="install-step-mirror" style="display: none;">
+                        <div class="install-step-title">Selecione um espelho Debian</div>
+                        <div class="install-options">
+                            <div class="install-option selected"><span class="install-option-radio">●</span> deb.debian.org (espelho global automático)</div>
+                            <div class="install-option"><span class="install-option-radio">○</span> br.debian.org (Brasil)</div>
+                            <div class="install-option"><span class="install-option-radio">○</span> ftp.br.debian.org (Brasil)</div>
+                            <div class="install-option"><span class="install-option-radio">○</span> ftp.us.debian.org (EUA)</div>
+                            <div class="install-option"><span class="install-option-radio">○</span> ftp.uk.debian.org (Reino Unido)</div>
+                            <div class="install-option"><span class="install-option-radio">○</span> ftp.de.debian.org (Alemanha)</div>
+                            <div class="install-option"><span class="install-option-radio">○</span> Outro (especificar)</div>
+                            <div class="install-option" style="display: none;">
+                                <input type="text" class="install-input" id="install-custom-mirror" placeholder="Digite o espelho personalizado">
+                            </div>
+                        </div>
+                    </div>
+                    
                     <div class="install-step" id="install-step-root" style="display: none;">
                         <div class="install-step-title">Senha do superusuário (root)</div>
                         <div class="install-options">
@@ -827,6 +1171,12 @@
                             <div class="login-row">
                                 <span class="login-label">Confirme:</span>
                                 <input type="password" id="install-root-password-confirm" class="install-input">
+                            </div>
+                            <div class="login-row" style="margin-top: 15px;">
+                                <label>
+                                    <input type="checkbox" id="install-disable-root">
+                                    Desabilitar login do root (recomendado para segurança)
+                                </label>
                             </div>
                         </div>
                     </div>
@@ -850,6 +1200,12 @@
                                 <span class="login-label">Confirme:</span>
                                 <input type="password" id="install-user-password-confirm" class="install-input">
                             </div>
+                            <div class="login-row" style="margin-top: 15px;">
+                                <label>
+                                    <input type="checkbox" id="install-add-to-sudo" checked>
+                                    Adicionar usuário ao grupo sudo (permitir acesso administrativo)
+                                </label>
+                            </div>
                         </div>
                     </div>
                     
@@ -858,6 +1214,7 @@
                         <div class="install-options">
                             <div class="install-option selected"><span class="install-option-radio">●</span> Guiado - usar disco inteiro</div>
                             <div class="install-option"><span class="install-option-radio">○</span> Guiado - usar LVM</div>
+                            <div class="install-option"><span class="install-option-radio">○</span> Guiado - usar LVM criptografado</div>
                             <div class="install-option"><span class="install-option-radio">○</span> Manual</div>
                         </div>
                         
@@ -866,6 +1223,11 @@
                             <div class="install-option selected"><span class="install-option-radio">●</span> SCSI1 (0,0,0) (sda) - 50.0 GB ATA VBOX HARDDISK</div>
                             
                             <div style="margin-top: 15px;">Esquema de particionamento:</div>
+                            <div class="install-option selected"><span class="install-option-radio">●</span> Todos os arquivos em uma partição (recomendado para iniciantes)</div>
+                            <div class="install-option"><span class="install-option-radio">○</span> Partição /home separada</div>
+                            <div class="install-option"><span class="install-option-radio">○</span> Partições /home, /var e /tmp separadas</div>
+                            
+                            <div style="margin-top: 15px;">Resumo da configuração de particionamento:</div>
                             <table class="install-partition-table">
                                 <tr>
                                     <th>Dispositivo</th>
@@ -898,13 +1260,27 @@
                     <div class="install-step" id="install-step-packages" style="display: none;">
                         <div class="install-step-title">Seleção de software</div>
                         <div class="install-options">
-                            <div class="install-option"><input type="checkbox" checked> Ambiente de área de trabalho Debian</div>
-                            <div class="install-option"><input type="checkbox" checked> ... GNOME</div>
-                            <div class="install-option"><input type="checkbox"> ... Xfce</div>
-                            <div class="install-option"><input type="checkbox"> ... KDE Plasma</div>
-                            <div class="install-option"><input type="checkbox" checked> Servidor web</div>
-                            <div class="install-option"><input type="checkbox" checked> Servidor SSH</div>
-                            <div class="install-option"><input type="checkbox" checked> Utilitários de sistema padrão</div>
+                            <div class="install-option"><input type="checkbox" id="install-desktop" checked> Ambiente de área de trabalho Debian</div>
+                            <div class="install-option" style="margin-left: 20px;"><input type="checkbox" id="install-gnome" checked> ... GNOME</div>
+                            <div class="install-option" style="margin-left: 20px;"><input type="checkbox" id="install-kde"> ... KDE Plasma</div>
+                            <div class="install-option" style="margin-left: 20px;"><input type="checkbox" id="install-xfce"> ... Xfce</div>
+                            <div class="install-option" style="margin-left: 20px;"><input type="checkbox" id="install-mate"> ... MATE</div>
+                            <div class="install-option" style="margin-left: 20px;"><input type="checkbox" id="install-cinnamon"> ... Cinnamon</div>
+                            <div class="install-option" style="margin-left: 20px;"><input type="checkbox" id="install-lxde"> ... LXDE</div>
+                            <div class="install-option" style="margin-left: 20px;"><input type="checkbox" id="install-lxqt"> ... LXQt</div>
+                            <div class="install-option"><input type="checkbox" id="install-web-server"> Servidor web</div>
+                            <div class="install-option" style="margin-left: 20px;"><input type="checkbox" id="install-apache" checked> ... Apache</div>
+                            <div class="install-option" style="margin-left: 20px;"><input type="checkbox" id="install-nginx"> ... Nginx</div>
+                            <div class="install-option"><input type="checkbox" id="install-ssh-server" checked> Servidor SSH</div>
+                            <div class="install-option"><input type="checkbox" id="install-mail-server"> Servidor de e-mail</div>
+                            <div class="install-option"><input type="checkbox" id="install-samba"> Servidor de arquivo Samba</div>
+                            <div class="install-option"><input type="checkbox" id="install-database"> Servidor de banco de dados</div>
+                            <div class="install-option" style="margin-left: 20px;"><input type="checkbox" id="install-mysql"> ... MySQL/MariaDB</div>
+                            <div class="install-option" style="margin-left: 20px;"><input type="checkbox" id="install-postgresql"> ... PostgreSQL</div>
+                            <div class="install-option"><input type="checkbox" id="install-standard" checked> Utilitários de sistema padrão</div>
+                            <div class="install-option"><input type="checkbox" id="install-print-server"> Servidor de impressão</div>
+                            <div class="install-option"><input type="checkbox" id="install-ssh-client" checked> Cliente SSH</div>
+                            <div class="install-option"><input type="checkbox" id="install-development"> Ferramentas de desenvolvimento</div>
                         </div>
                     </div>
                     
@@ -912,12 +1288,100 @@
                         <div class="install-step-title">Instalar o carregador de inicialização GRUB</div>
                         <div class="install-options">
                             <div class="install-option selected"><span class="install-option-radio">●</span> Sim, instalar o GRUB no registro mestre de inicialização</div>
-                            <div class="install-option"><span class="install-option-radio">○</span> Não</div>
+                            <div class="install-option"><span class="install-option-radio">○</span> Sim, instalar o GRUB em uma partição (configuração avançada)</div>
+                            <div class="install-option"><span class="install-option-radio">○</span> Não, não instalar o GRUB</div>
                         </div>
                         
                         <div style="margin-top: 15px;">
                             <div>Dispositivo para instalação do carregador de inicialização:</div>
                             <div class="install-option selected"><span class="install-option-radio">●</span> /dev/sda (ata-VBOX_HARDDISK)</div>
+                            <div class="install-option"><span class="install-option-radio">○</span> Outro dispositivo</div>
+                        </div>
+                        
+                        <div style="margin-top: 15px;">
+                            <div>Opções avançadas do GRUB:</div>
+                            <div class="install-option">
+                                <label>
+                                    <input type="checkbox" id="install-grub-timeout" checked>
+                                    Usar timeout padrão (5 segundos)
+                                </label>
+                            </div>
+                            <div class="install-option">
+                                <label>
+                                    <input type="checkbox" id="install-grub-quiet" checked>
+                                    Modo silencioso (quiet)
+                                </label>
+                            </div>
+                            <div class="install-option">
+                                <label>
+                                    <input type="checkbox" id="install-grub-splash" checked>
+                                    Mostrar tela de splash
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="install-step" id="install-step-security" style="display: none;">
+                        <div class="install-step-title">Configurações de segurança</div>
+                        <div class="install-options">
+                            <div class="install-option">
+                                <label>
+                                    <input type="checkbox" id="install-security-updates" checked>
+                                    Instalar atualizações de segurança automaticamente
+                                </label>
+                            </div>
+                            <div class="install-option">
+                                <label>
+                                    <input type="checkbox" id="install-firewall" checked>
+                                    Configurar firewall (ufw)
+                                </label>
+                            </div>
+                            <div class="install-option">
+                                <label>
+                                    <input type="checkbox" id="install-apparmor" checked>
+                                    Habilitar AppArmor
+                                </label>
+                            </div>
+                            <div class="install-option">
+                                <label>
+                                    <input type="checkbox" id="install-harden">
+                                    Configurações de segurança avançadas
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="install-step" id="install-step-timezone" style="display: none;">
+                        <div class="install-step-title">Configuração de fuso horário</div>
+                        <div class="install-options">
+                            <div>Selecione seu fuso horário:</div>
+                            <select id="install-timezone" class="install-input">
+                                <option value="America/Sao_Paulo" selected>America/Sao_Paulo (UTC-3)</option>
+                                <option value="America/Manaus">America/Manaus (UTC-4)</option>
+                                <option value="America/Rio_Branco">America/Rio_Branco (UTC-5)</option>
+                                <option value="America/Noronha">America/Noronha (UTC-2)</option>
+                                <option value="America/New_York">America/New_York (UTC-5/4)</option>
+                                <option value="America/Chicago">America/Chicago (UTC-6/5)</option>
+                                <option value="America/Denver">America/Denver (UTC-7/6)</option>
+                                <option value="America/Los_Angeles">America/Los_Angeles (UTC-8/7)</option>
+                                <option value="Europe/London">Europe/London (UTC+0/1)</option>
+                                <option value="Europe/Paris">Europe/Paris (UTC+1/2)</option>
+                                <option value="Europe/Berlin">Europe/Berlin (UTC+1/2)</option>
+                                <option value="Asia/Tokyo">Asia/Tokyo (UTC+9)</option>
+                                <option value="Australia/Sydney">Australia/Sydney (UTC+10/11)</option>
+                            </select>
+                            
+                            <div style="margin-top: 15px;">
+                                <label>
+                                    <input type="checkbox" id="install-ntp" checked>
+                                    Usar Network Time Protocol (NTP) para sincronização automática de relógio
+                                </label>
+                            </div>
+                            
+                            <div id="ntp-servers" style="margin-top: 10px;">
+                                <span>Servidores NTP:</span>
+                                <input type="text" id="install-ntp-servers" class="install-input" value="0.debian.pool.ntp.org 1.debian.pool.ntp.org 2.debian.pool.ntp.org 3.debian.pool.ntp.org">
+                            </div>
                         </div>
                     </div>
                     
@@ -925,7 +1389,22 @@
                         <div class="install-step-title">Finalizar a instalação</div>
                         <div class="install-options">
                             <p>O sistema está pronto para ser instalado. Esta é sua última chance de cancelar as alterações antes que elas sejam gravadas no disco.</p>
+                            <p>Serão realizadas as seguintes ações:</p>
+                            <ul>
+                                <li>O disco /dev/sda será particionado conforme o esquema mostrado</li>
+                                <li>As partições serão formatadas (TODOS OS DADOS SERÃO PERDIDOS)</li>
+                                <li>O sistema base Debian será instalado</li>
+                                <li>Os pacotes selecionados serão instalados</li>
+                                <li>O GRUB será instalado no MBR</li>
+                                <li>Configurações de rede, usuários e segurança serão aplicadas</li>
+                            </ul>
                             <p>Após a confirmação, o sistema será instalado. Isso pode levar alguns minutos.</p>
+                            
+                            <div style="margin-top: 20px;">
+                                <label>
+                                    <input type="checkbox" id="install-confirm-checkbox"> Eu entendo que os dados no disco serão apagados e desejo prosseguir com a instalação
+                                </label>
+                            </div>
                         </div>
                     </div>
                     
@@ -935,6 +1414,7 @@
                             <div class="install-progress-bar" id="install-progress-bar"></div>
                         </div>
                         <div id="install-status" style="margin-top: 10px; color: #888;">Iniciando instalação...</div>
+                        <div id="install-details" style="margin-top: 20px; height: 300px; overflow-y: auto; background: #111; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 12px;"></div>
                     </div>
                     
                     <div class="install-actions">
@@ -946,12 +1426,45 @@
             
             <div class="editor-container" id="editor-container">
                 <div class="editor-header" id="editor-header">
-                    Editando: /etc/hostname
+                    <span>Editando: /etc/hostname</span>
+                    <div class="editor-buttons">
+                        <button class="editor-button" id="editor-save">Salvar (^O)</button>
+                        <button class="editor-button" id="editor-exit">Sair (^X)</button>
+                    </div>
                 </div>
                 <textarea class="editor-content" id="editor-content"></textarea>
                 <div class="editor-footer">
                     <div id="editor-status">Pressione Ctrl+O para salvar, Ctrl+X para sair</div>
                     <div id="editor-position">Linha: 1, Coluna: 1</div>
+                </div>
+            </div>
+            
+            <div class="file-browser" id="file-browser">
+                <div class="file-browser-header">
+                    <div class="file-browser-path" id="file-browser-path">/</div>
+                    <div class="file-browser-buttons">
+                        <button class="file-browser-button" id="file-browser-new-file">Novo arquivo</button>
+                        <button class="file-browser-button" id="file-browser-new-folder">Nova pasta</button>
+                        <button class="file-browser-button" id="file-browser-delete">Excluir</button>
+                        <button class="file-browser-button" id="file-browser-rename">Renomear</button>
+                        <button class="file-browser-button" id="file-browser-cancel">Cancelar</button>
+                    </div>
+                </div>
+                <div class="file-browser-content" id="file-browser-content">
+                    <!-- Os itens do navegador de arquivos serão adicionados aqui -->
+                </div>
+            </div>
+            
+            <div class="error-screen" id="error-screen">
+                <div class="error-icon">⚠️</div>
+                <div class="error-title">Erro no sistema</div>
+                <div class="error-message" id="error-message">
+                    Um erro crítico ocorreu no sistema. Isso pode ter sido causado por um problema de hardware, corrupção de arquivos ou configuração incorreta.
+                </div>
+                <div class="error-actions">
+                    <button class="error-button" id="error-reboot">Reiniciar</button>
+                    <button class="error-button" id="error-recovery">Modo de recuperação</button>
+                    <button class="error-button" id="error-fsck">Verificar sistema de arquivos</button>
                 </div>
             </div>
         </div>
@@ -976,6 +1489,8 @@
             </div>
             <button class="btn" id="saveBtn">Salvar</button>
             <button class="btn" id="loadBtn">Carregar</button>
+            <button class="btn" id="exportBtn">Exportar</button>
+            <button class="btn" id="importBtn">Importar</button>
             <button class="btn" id="resetBtn">Resetar</button>
         </div>
     </div>
@@ -995,6 +1510,35 @@
     <div class="context-menu" id="context-menu">
         <div class="context-menu-item" id="context-copy">Copiar</div>
         <div class="context-menu-item" id="context-paste">Colar</div>
+        <div class="context-menu-item" id="context-select-all">Selecionar tudo</div>
+        <div class="context-menu-item" id="context-terminal-clear">Limpar terminal</div>
+    </div>
+
+    <div class="export-modal" id="exportModal">
+        <div class="export-content">
+            <div class="export-header">
+                <div class="export-title">Exportar/Importar Configuração</div>
+                <button class="export-close" id="closeExportModal">&times;</button>
+            </div>
+            <div>
+                <h3>Exportar Configuração</h3>
+                <p>Copie o código abaixo para salvar a configuração atual:</p>
+                <textarea class="export-data" id="exportData" readonly></textarea>
+                <div class="export-actions">
+                    <button class="export-button" id="copyExportData">Copiar</button>
+                    <button class="export-button" id="downloadExportData">Download</button>
+                </div>
+            </div>
+            <div class="import-area">
+                <h3>Importar Configuração</h3>
+                <p>Cole o código de configuração abaixo:</p>
+                <textarea class="import-text" id="importData" placeholder="Cole aqui o código de configuração..."></textarea>
+                <div class="export-actions">
+                    <button class="export-button" id="uploadImportData">Upload</button>
+                    <button class="export-button" id="applyImportData">Aplicar</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <div class="footer">
@@ -1009,25 +1553,27 @@
                 owner: 'root',
                 group: 'root',
                 content: {},
-                date: '2025-05-15 08:00'
+                date: '2025-06-01 08:00'
             }
         };
 
         const DEFAULT_DIRS = [
-            'boot', 'bin', 'dev', 'etc', 'home', 'lib', 'media', 
-            'mnt', 'opt', 'proc', 'root', 'sbin', 'srv', 'sys', 
+            'boot', 'bin', 'dev', 'etc', 'home', 'lib', 'lib64', 'media', 
+            'mnt', 'opt', 'proc', 'root', 'run', 'sbin', 'srv', 'sys', 
             'tmp', 'usr', 'var'
         ];
 
         const AVAILABLE_PACKAGES = {
             'adduser': { version: '3.136', size: '456 kB', description: 'add and remove users and groups', installed: false, dependencies: [] },
             'apache2': { version: '2.4.56', size: '8.5MB', description: 'Apache HTTP Server', installed: false, dependencies: ['libapache2-mod-php'] },
+            'apparmor': { version: '3.0.8', size: '2.4MB', description: 'user-space parser utility for AppArmor', installed: false, dependencies: [] },
             'apt': { version: '2.6.1', size: '4.2MB', description: 'commandline package manager', installed: true, dependencies: [] },
             'apt-utils': { version: '2.6.1', size: '1.1MB', description: 'package management related utility programs', installed: false, dependencies: ['apt'] },
             'bash': { version: '5.2.15', size: '6.4MB', description: 'GNU Bourne Again SHell', installed: true, dependencies: [] },
             'bash-completion': { version: '2.11', size: '1.6MB', description: 'programmable completion for the bash shell', installed: false, dependencies: ['bash'] },
             'bc': { version: '1.07.1', size: '224 kB', description: 'GNU bc arbitrary precision calculator language', installed: false, dependencies: [] },
             'bind9': { version: '9.18.16', size: '14MB', description: 'Internet Domain Name Server', installed: false, dependencies: [] },
+            'binutils': { version: '2.40', size: '4.6MB', description: 'GNU assembler, linker and binary utilities', installed: false, dependencies: [] },
             'build-essential': { version: '12.9', size: '8 kB', description: 'Informational list of build-essential packages', installed: false, dependencies: ['gcc', 'g++', 'make'] },
             'bzip2': { version: '1.0.8', size: '112 kB', description: 'high-quality block-sorting file compressor - utilities', installed: false, dependencies: [] },
             'ca-certificates': { version: '20230311', size: '364 kB', description: 'Common CA certificates', installed: true, dependencies: [] },
@@ -1038,6 +1584,7 @@
             'curl': { version: '7.88.1', size: '1.2MB', description: 'command line tool for transferring data with URL syntax', installed: false, dependencies: [] },
             'dash': { version: '0.5.12', size: '168 kB', description: 'POSIX-compliant shell', installed: true, dependencies: [] },
             'dbus': { version: '1.14.8', size: '1.2MB', description: 'simple interprocess messaging system', installed: true, dependencies: [] },
+            'debconf': { version: '1.5.82', size: '248 kB', description: 'Debian configuration management system', installed: true, dependencies: [] },
             'diffutils': { version: '3.8', size: '1.4MB', description: 'File comparison utilities', installed: true, dependencies: [] },
             'dig': { version: '9.18.16', size: '156 kB', description: 'DNS lookup utility', installed: false, dependencies: [] },
             'dnsutils': { version: '9.18.16', size: '240 kB', description: 'Clients provided with BIND', installed: false, dependencies: [] },
@@ -1047,6 +1594,7 @@
             'efibootmgr': { version: '17', size: '68 kB', description: 'Interact with the EFI Boot Manager', installed: false, dependencies: [] },
             'eject': { version: '2.37.4', size: '48 kB', description: 'ejects CDs and operates CD-Changers under Linux', installed: false, dependencies: [] },
             'ethtool': { version: '6.1', size: '256 kB', description: 'display or change Ethernet device settings', installed: false, dependencies: [] },
+            'fail2ban': { version: '1.0.2', size: '768 kB', description: 'ban hosts that cause multiple authentication errors', installed: false, dependencies: [] },
             'fdisk': { version: '2.37.4', size: '448 kB', description: 'collection of partitioning utilities', installed: true, dependencies: [] },
             'ffmpeg': { version: '5.1.3', size: '5.6MB', description: 'Tools for transcoding, streaming and playing of multimedia files', installed: false, dependencies: [] },
             'file': { version: '5.44', size: '96 kB', description: 'Recognize the type of data in a file using "magic" numbers', installed: true, dependencies: [] },
@@ -1054,6 +1602,7 @@
             'firefox-esr': { version: '115.6.0', size: '56MB', description: 'Mozilla Firefox web browser - Extended Support Release (ESR)', installed: false, dependencies: [] },
             'firmware-linux-free': { version: '20210315', size: '5.2MB', description: 'Binary firmware for various drivers in the Linux kernel', installed: false, dependencies: [] },
             'fonts-dejavu': { version: '2.37', size: '10MB', description: 'metapackage to pull in fonts-dejavu-core and fonts-dejavu-extra', installed: false, dependencies: [] },
+            'ftp': { version: '0.17', size: '122 kB', description: 'classical file transfer client', installed: false, dependencies: [] },
             'g++': { version: '12.3.0', size: '1.7MB', description: 'GNU C++ compiler', installed: false, dependencies: [] },
             'gcc': { version: '12.3.0', size: '5.6MB', description: 'GNU C compiler', installed: false, dependencies: [] },
             'gdisk': { version: '1.0.9', size: '364 kB', description: 'GPT fdisk text-mode partitioning tool', installed: false, dependencies: [] },
@@ -1114,6 +1663,7 @@
             'perl': { version: '5.36.0', size: '12MB', description: 'Larry Wall\'s Practical Extraction and Report Language', installed: true, dependencies: [] },
             'php': { version: '8.2.0', size: '5.2MB', description: 'server-side, HTML-embedded scripting language', installed: false, dependencies: [] },
             'php-mysql': { version: '8.2.0', size: '548 kB', description: 'MySQL module for PHP', installed: false, dependencies: ['php'] },
+            'postgresql': { version: '15.2', size: '17MB', description: 'PostgreSQL database server (metapackage)', installed: false, dependencies: [] },
             'procps': { version: '4.0.3', size: '1.1MB', description: '/proc file system utilities', installed: true, dependencies: [] },
             'psmisc': { version: '23.6', size: '456 kB', description: 'utilities that use the proc file system', installed: false, dependencies: [] },
             'python3': { version: '3.11.2', size: '4.6MB', description: 'interactive high-level object-oriented language', installed: true, dependencies: [] },
@@ -1121,6 +1671,7 @@
             'qemu-guest-agent': { version: '7.2', size: '1.7MB', description: 'Guest-side qemu-system agent', installed: false, dependencies: [] },
             'rsync': { version: '3.2.7', size: '756 kB', description: 'fast, versatile, remote (and local) file-copying tool', installed: false, dependencies: [] },
             'rsyslog': { version: '8.2212.0', size: '1.6MB', description: 'reliable system and kernel logging daemon', installed: true, dependencies: [] },
+            'samba': { version: '4.17.9', size: '6.2MB', description: 'SMB/CIFS file, print, and login server for Unix', installed: false, dependencies: [] },
             'screen': { version: '4.9.0', size: '1.1MB', description: 'terminal multiplexer with VT100/ANSI terminal emulation', installed: false, dependencies: [] },
             'sed': { version: '4.9', size: '828 kB', description: 'GNU stream editor for filtering/transforming text', installed: true, dependencies: [] },
             'smartmontools': { version: '7.3', size: '1.4MB', description: 'control and monitor storage systems using S.M.A.R.T.', installed: false, dependencies: [] },
@@ -1152,7 +1703,7 @@
         };
 
         const AVAILABLE_COMMANDS = [
-            'addgroup', 'adduser', 'apt', 'apt-get', 'arch', 'awk', 'basename', 'bash', 'bc', 'blkid', 'bunzip2', 'bzcat', 'bzip2', 'cal', 'cat', 'cd', 'chgrp', 'chmod', 'chown', 'chroot', 'chvt', 'clear', 'cmp', 'comm', 'cp', 'cpio', 'cron', 'crontab', 'curl', 'cut', 'date', 'dc', 'dd', 'df', 'diff', 'dig', 'dir', 'dmesg', 'dnsdomainname', 'docker', 'dpkg', 'du', 'echo', 'egrep', 'eject', 'env', 'expand', 'expr', 'factor', 'fdisk', 'fgrep', 'file', 'find', 'fmt', 'fold', 'free', 'fsck', 'ftp', 'gcc', 'getopt', 'getty', 'grep', 'groupadd', 'groupdel', 'groupmod', 'groups', 'gzip', 'halt', 'head', 'hexdump', 'hostid', 'hostname', 'htop', 'id', 'ifconfig', 'ifdown', 'ifup', 'init', 'insmod', 'ip', 'iptables', 'journalctl', 'kill', 'killall', 'kmod', 'last', 'ldconfig', 'less', 'link', 'ln', 'locate', 'login', 'ls', 'lsattr', 'lsblk', 'lsmod', 'lsof', 'lspci', 'lsusb', 'man', 'md5sum', 'mkdir', 'mkfifo', 'mknod', 'mkswap', 'modinfo', 'modprobe', 'more', 'mount', 'mv', 'nano', 'nc', 'netstat', 'nice', 'nl', 'nmap', 'nohup', 'nslookup', 'od', 'passwd', 'paste', 'patch', 'pidof', 'ping', 'poweroff', 'pppd', 'printf', 'ps', 'pwd', 'readlink', 'reboot', 'rename', 'renice', 'reset', 'resize', 'rm', 'rmdir', 'rmmod', 'route', 'rpm', 'rsync', 'run-parts', 'scp', 'sed', 'service', 'sftp', 'sh', 'sha1sum', 'sha256sum', 'sha512sum', 'shred', 'shuf', 'shutdown', 'sleep', 'sort', 'split', 'ssh', 'stat', 'strace', 'strings', 'stty', 'su', 'sudo', 'sum', 'swapoff', 'swapon', 'sync', 'systemctl', 'tac', 'tail', 'tar', 'tee', 'test', 'time', 'timeout', 'top', 'touch', 'tr', 'traceroute', 'true', 'tty', 'umount', 'uname', 'unexpand', 'uniq', 'unix2dos', 'unlink', 'unzip', 'uptime', 'useradd', 'userdel', 'usermod', 'users', 'vdir', 'vi', 'vim', 'vmstat', 'w', 'watch', 'wc', 'wget', 'whatis', 'whereis', 'which', 'who', 'whoami', 'write', 'xargs', 'xz', 'zcat', 'zcmp', 'zdiff', 'zgrep', 'zip', 'zmore', 'znew'
+            'addgroup', 'adduser', 'apt', 'apt-get', 'apt-cache', 'arch', 'awk', 'basename', 'bash', 'bc', 'bg', 'blkid', 'bunzip2', 'bzcat', 'bzip2', 'cal', 'cat', 'cd', 'chage', 'chattr', 'chfn', 'chgrp', 'chmod', 'chown', 'chpasswd', 'chroot', 'chsh', 'chvt', 'clear', 'cmp', 'comm', 'cp', 'cpio', 'cron', 'crontab', 'csplit', 'curl', 'cut', 'date', 'dc', 'dd', 'delgroup', 'deluser', 'df', 'diff', 'dig', 'dir', 'dircolors', 'dirname', 'dmesg', 'dnsdomainname', 'docker', 'dpkg', 'du', 'echo', 'ed', 'egrep', 'eject', 'env', 'expand', 'expr', 'factor', 'faillog', 'false', 'fc-cache', 'fc-list', 'fdisk', 'fg', 'fgrep', 'file', 'find', 'findmnt', 'fmt', 'fold', 'free', 'fsck', 'ftp', 'fuser', 'gcc', 'getopt', 'getty', 'grep', 'groupadd', 'groupdel', 'groupmod', 'groups', 'grpck', 'grpconv', 'grpunconv', 'gunzip', 'gzexe', 'gzip', 'halt', 'hash', 'head', 'hexdump', 'hostid', 'hostname', 'htop', 'id', 'ifconfig', 'ifdown', 'ifquery', 'ifup', 'init', 'insmod', 'install', 'ip', 'iptables', 'join', 'journalctl', 'kill', 'killall', 'kmod', 'last', 'lastb', 'lastlog', 'ld', 'ldconfig', 'ldd', 'less', 'link', 'ln', 'locale', 'locate', 'logger', 'login', 'logname', 'logout', 'logrotate', 'look', 'ls', 'lsattr', 'lsblk', 'lscpu', 'lshw', 'lsmod', 'lsof', 'lspci', 'lsusb', 'man', 'md5sum', 'mesg', 'mkdir', 'mkfifo', 'mknod', 'mkswap', 'mktemp', 'modinfo', 'modprobe', 'more', 'mount', 'mountpoint', 'mv', 'nano', 'nc', 'netstat', 'newgrp', 'nice', 'nl', 'nmap', 'nohup', 'nologin', 'nproc', 'nslookup', 'od', 'passwd', 'paste', 'patch', 'pidof', 'ping', 'pkill', 'poweroff', 'pr', 'printenv', 'printf', 'ps', 'pstree', 'pwd', 'readlink', 'reboot', 'rename', 'renice', 'reset', 'resize', 'rm', 'rmdir', 'rmmod', 'route', 'rpm', 'rsync', 'run-parts', 'scp', 'screen', 'script', 'scriptreplay', 'sdiff', 'sed', 'service', 'sftp', 'sh', 'sha1sum', 'sha224sum', 'sha256sum', 'sha384sum', 'sha512sum', 'shred', 'shuf', 'shutdown', 'sleep', 'sort', 'split', 'ssh', 'ssh-add', 'ssh-agent', 'ssh-keygen', 'ssh-keyscan', 'stat', 'strace', 'strings', 'stty', 'su', 'sudo', 'sum', 'swapoff', 'swapon', 'sync', 'systemctl', 'systemd-analyze', 'tac', 'tail', 'tar', 'tee', 'test', 'time', 'timeout', 'top', 'touch', 'tr', 'traceroute', 'true', 'tty', 'umount', 'uname', 'unexpand', 'uniq', 'unix2dos', 'unlink', 'unzip', 'uptime', 'useradd', 'userdel', 'usermod', 'users', 'vdir', 'vi', 'vim', 'vmstat', 'w', 'watch', 'wc', 'wget', 'whatis', 'whereis', 'which', 'who', 'whoami', 'write', 'xargs', 'xz', 'zcat', 'zcmp', 'zdiff', 'zgrep', 'zip', 'zmore', 'znew'
         ];
 
         let filesystem = JSON.parse(JSON.stringify(FILESYSTEM_INITIAL));
