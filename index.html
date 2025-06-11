@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Terminal Debian </title>
+    <title>Terminal Debian</title>
     <link rel="icon" href="favicon.ico" type="image/x-icon">
     <style>
         :root {
@@ -64,6 +64,28 @@
                 linear-gradient(90deg, rgba(0, 50, 0, 0.05) 1px, transparent 1px);
             background-size: 20px 20px;
             z-index: -1;
+        }
+        
+        
+        .windows-server-btn {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background-color: #0078d7;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 10px 15px;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 100;
+            box-shadow: 0 0 10px rgba(0, 120, 215, 0.4);
+            transition: all 0.3s;
+        }
+        
+        .windows-server-btn:hover {
+            background-color: #106ebe;
+            transform: scale(1.05);
         }
 
         .container {
@@ -1011,6 +1033,9 @@
     </style>
 </head>
 <body>
+    <!-- Botão Windows Server -->
+    <button class="windows-server-btn" id="windowsServerBtn">Windows Server</button>
+    
     <div class="background"></div>
     <div class="grid"></div>
 
@@ -1739,6 +1764,7 @@
         const contextMenu = document.getElementById('context-menu');
         const contextCopy = document.getElementById('context-copy');
         const contextPaste = document.getElementById('context-paste');
+        const windowsServerBtn = document.getElementById('windowsServerBtn');
         
         const installBackBtn = document.getElementById('install-back');
         const installNextBtn = document.getElementById('install-next');
@@ -1970,6 +1996,11 @@
             
             editorContent.addEventListener('click', updateEditorPosition);
             editorContent.addEventListener('keyup', updateEditorPosition);
+            
+            // Adicionar evento ao botão do Windows Server
+            windowsServerBtn.addEventListener('click', function() {
+                window.location.href = 'setup.html';
+            });
             
             // Criar uma entrada invisível para capturar entrada do teclado nativo
             createHiddenInput();
@@ -2342,6 +2373,98 @@ root	ALL=(ALL:ALL) ALL
 
 # Permitir membros do grupo sudo a executar qualquer comando
 %sudo	ALL=(ALL:ALL) ALL`,
+                date: '2025-06-01'
+            };
+            
+            // Adicionar o arquivo setup.html para o Windows Server
+            filesystem['/']['setup.html'] = {
+                type: '-',
+                permissions: '-rw-r--r--',
+                owner: 'root',
+                group: 'root',
+                content: `<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Windows Server Setup</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #0078d7;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            color: #fff;
+        }
+        .setup-container {
+            background-color: rgba(0, 0, 0, 0.7);
+            border-radius: 10px;
+            padding: 30px;
+            width: 80%;
+            max-width: 800px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .setup-step {
+            margin-bottom: 20px;
+        }
+        .setup-option {
+            background-color: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .setup-option:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+            transform: scale(1.02);
+        }
+        .back-button {
+            background-color: #0078d7;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 20px;
+            font-weight: bold;
+        }
+        .back-button:hover {
+            background-color: #106ebe;
+        }
+    </style>
+</head>
+<body>
+    <div class="setup-container">
+        <h1>Windows Server 2025 Setup</h1>
+        
+        <div class="setup-step">
+            <h2>Selecione uma opção de instalação:</h2>
+            <div class="setup-option">Instalação padrão (recomendada)</div>
+            <div class="setup-option">Instalação personalizada (avançada)</div>
+            <div class="setup-option">Recuperação de sistema</div>
+            <div class="setup-option">Ferramentas de diagnóstico</div>
+        </div>
+        
+        <div class="setup-step">
+            <h2>Ambiente:</h2>
+            <div class="setup-option">Windows Server 2025 Datacenter</div>
+            <div class="setup-option">Windows Server 2025 Standard</div>
+            <div class="setup-option">Windows Server 2025 Essentials</div>
+        </div>
+        
+        <button class="back-button" onclick="window.location.href='index.html'">Voltar para Debian</button>
+    </div>
+</body>
+</html>`,
                 date: '2025-06-01'
             };
         }
@@ -5198,7 +5321,12 @@ root	ALL=(ALL:ALL) ALL
         }
 
         function cmdSu(args) {
-            const targetUser = args.length > 0 ? args[0] : 'root';
+            // Verifica se o usuário deseja login shell com - ou -l
+            const loginShell = args.includes('-') || args.includes('-l');
+            
+            // Remove as opções para pegar o nome de usuário
+            const filteredArgs = args.filter(arg => arg !== '-' && arg !== '-l');
+            const targetUser = filteredArgs.length > 0 ? filteredArgs[0] : 'root';
             
             if (!currentState.users[targetUser]) {
                 addOutput(`su: usuário ${targetUser} não existe`, 'error');
@@ -5208,12 +5336,17 @@ root	ALL=(ALL:ALL) ALL
             }
             
             // Se for trocar para root ou o usuário atual já é root, não precisa de senha
-            if (targetUser === 'root' && currentState.currentUser === 'root') {
+            if ((targetUser === 'root' && currentState.currentUser === 'root') || 
+                (currentState.currentUser === 'root')) {
+                // Se pedir login shell, muda para o diretório home
+                if (loginShell) {
+                    ttys[currentState.currentTTY].currentDir = targetUser === 'root' ? '/root' : `/home/${targetUser}`;
+                    addOutput('');
+                }
+                
                 currentState.currentUser = targetUser;
                 ttys[currentState.currentTTY].user = targetUser;
-                ttys[currentState.currentTTY].currentDir = targetUser === 'root' ? '/root' : `/home/${targetUser}`;
                 
-                addOutput('');
                 isExecuting = false;
                 renderPrompt();
                 return;
@@ -5232,11 +5365,15 @@ root	ALL=(ALL:ALL) ALL
                     if (currentState.users[targetUser].password === password || currentState.currentUser === 'root') {
                         loadingElement.style.display = 'none';
                         
+                        // Se pedir login shell, muda para o diretório home
+                        if (loginShell) {
+                            ttys[currentState.currentTTY].currentDir = targetUser === 'root' ? '/root' : `/home/${targetUser}`;
+                            addOutput('');
+                        }
+                        
                         currentState.currentUser = targetUser;
                         ttys[currentState.currentTTY].user = targetUser;
-                        ttys[currentState.currentTTY].currentDir = targetUser === 'root' ? '/root' : `/home/${targetUser}`;
                         
-                        addOutput('');
                         isExecuting = false;
                         renderPrompt();
                     } else {
